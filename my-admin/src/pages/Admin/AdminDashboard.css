@@ -1,0 +1,36 @@
+.admin-dashboard {
+  min-height: 100vh;
+  padding: 40px;
+  background: #f5f9ff;
+}
+
+.admin-dashboard h1 {
+  color: #1976d2;
+  margin-bottom: 30px;
+}
+
+.admin-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.admin-card {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+  text-decoration: none;
+  color: #1976d2;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.admin-card:hover {
+  background: #1976d2;
+  color: white;
+}
+
+.logout {
+  color: #d32f2f;
+}
