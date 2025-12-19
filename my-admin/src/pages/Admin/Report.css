@@ -1,0 +1,19 @@
+.report-container {
+  padding: 20px;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report-table th,
+.report-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+.report-table th {
+  background-color: #f4f4f4;
+}
