@@ -1,24 +1,37 @@
 import { useState } from "react";
-import "./login.css"; // Correct path since files are in the same folder
+import { useNavigate } from "react-router-dom"; // for redirect
+import "./login.css";
 
 export default function AccountantLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Accountant Login Successful");
+
+    // Credential check (same pattern as Admin)
+    if (email === "accountant@nast.edu.np" && password === "accountant123") {
+      console.log("Accountant Login Successful");
+      // Redirect to Accountant Dashboard
+      navigate("/accountant/accountant-dashboard");
+    } else {
+      alert(
+        "Invalid Email or Password! Please use accountant@nast.edu.np and accountant123"
+      );
+    }
   };
 
   return (
     <div className="login-page">
       <div className="login-card">
         <div className="brand-section">
-        <div className="logo-placeholder" style={{ color: '#1976d2' }}>
-  
-</div>
-
-
+          <div
+            className="logo-placeholder"
+            style={{ color: "#1976d2" }}
+          >
+            NAST
+          </div>
           <h2>Accountant Portal</h2>
           <p>Payroll Management System</p>
         </div>
@@ -49,7 +62,20 @@ export default function AccountantLogin() {
           <button type="submit" className="login-btn accountant-theme">
             Sign In
           </button>
+          <div className="login-footer">
+          <button 
+            type="button" 
+            onClick={() => navigate("/")}
+            className="link-button"
+          >
+            Back to landing page
+          </button>
+          </div>
         </form>
+
+        <div className="login-footer">
+          <a href="/accountant/forgot-password">Forgot Password?</a>
+        </div>
       </div>
     </div>
   );

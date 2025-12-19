@@ -1,55 +1,66 @@
+/* Full-screen centered container */
 .landing-container {
-  min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  min-height: 100vh;
   background: #f5f9ff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Card container */
 .landing-card {
   background: white;
   padding: 40px;
-  border-radius: 10px;
-  width: 380px;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 90%;
   text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
+/* Titles */
 .landing-title {
   color: #1976d2;
+  font-size: 28px;
   margin-bottom: 10px;
 }
 
 .landing-subtitle {
   color: #555;
+  font-size: 14px;
   margin-bottom: 30px;
 }
 
+/* Button group */
 .button-group {
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
+/* Buttons */
 .landing-btn {
+  display: block;
   text-decoration: none;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 600;
   color: white;
+  text-align: center;
   transition: 0.3s;
 }
 
 .landing-btn.admin {
-  background: #1976d2;
+  background-color: #1976d2;
 }
 
 .landing-btn.accountant {
-  background: #0288d1;
+  background-color: #0288d1;
 }
 
 .landing-btn.employee {
-  background: #2e7d32;
+  background-color: #2e7d32;
 }
 
 .landing-btn:hover {

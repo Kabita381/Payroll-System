@@ -14,7 +14,7 @@ export default function AdminLogin() {
     if (email === "admin@nast.edu.np" && password === "admin123") {
       console.log("Login Successful");
       // Redirects the user to the Admin Dashboard path
-      navigate("/admin/dashboard"); 
+      navigate("/admin/admin-dashboard"); 
     } else {
       // Shows an error if the credentials don't match
       alert("Invalid Email or Password! Please use admin@nast.edu.np and admin123");
@@ -27,7 +27,7 @@ export default function AdminLogin() {
         <div className="brand-section">
           <div className="logo-placeholder">NAST</div>
           <h2>Admin Portal</h2>
-          <p>Payroll Management System</p>
+          <h3>Payroll Management System</h3>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -57,9 +57,19 @@ export default function AdminLogin() {
             Sign In
           </button>
         </form>
-        
+
         <div className="login-footer">
-          <a href="#">Forgot Password?</a>
+          <button 
+            type="button" 
+            onClick={() => navigate("/")}
+            className="link-button"
+          >
+            Back to landing page
+          </button>
+          </div>
+   
+        <div className="login-footer">
+          <a href="/admin/forgot-password">Forgot Password?</a>
         </div>
       </div>
     </div>

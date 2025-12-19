@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom"; // 1. Import Link
-import "./admin.css";
+import  "./ForgotPassword.css" ;
 
 export default function AdminDashboard() {
   return (

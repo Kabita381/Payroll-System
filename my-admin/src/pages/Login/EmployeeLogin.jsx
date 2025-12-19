@@ -1,38 +1,78 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./login.css";
 
 export default function EmployeeLogin() {
   const [empId, setEmpId] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Employee Login Successful");
+
+    // Simple credential check
+    if (empId === "emp001" && password === "emp123") {
+      console.log("Employee Login Successful");
+      navigate("/employee/employee-dashboard");
+    } else {
+      alert(
+        "Invalid Employee ID or Password! Please use emp001 and emp123"
+      );
+    }
   };
 
   return (
-    <div className="container">
-      <form className="card" onSubmit={handleSubmit}>
-        <h2>Employee Login</h2>
+    <div className="login-page">
+      <div className="login-card">
+        <div className="brand-section">
+          <div className="logo-placeholder" style={{ color: "#d32f2f" }}>
+            NAST
+          </div>
+          <h2>Employee Portal</h2>
+          <p>Payroll Management System</p>
+        </div>
 
-        <input
-          type="text"
-          placeholder="Employee ID"
-          value={empId}
-          onChange={(e) => setEmpId(e.target.value)}
-          required
-        />
+        <form onSubmit={handleSubmit}>
+          <div className="input-group">
+            <label>Employee ID</label>
+            <input
+              type="text"
+              placeholder="emp001"
+              value={empId}
+              onChange={(e) => setEmpId(e.target.value)}
+              required
+            />
+          </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+          <div className="input-group">
+            <label>Password</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-        <button className="btn employee">Login</button>
-      </form>
+          <button type="submit" className="login-btn employee-theme">
+            Sign In
+          </button>
+          <div className="login-footer">
+          <button 
+            type="button" 
+            onClick={() => navigate("/")}
+            className="link-button"
+          >
+            Back to landing page
+          </button>
+          </div>
+        </form>
+
+        <div className="login-footer">
+          <a href="/employee/forgot-password">Forgot Password?</a>
+        </div>
+      </div>
     </div>
   );
 }

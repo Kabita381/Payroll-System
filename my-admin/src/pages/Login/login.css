@@ -1,34 +1,104 @@
+/* Full-screen centered container */
 .login-page {
-  height: 100vh;
+     height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+ 
   background-color: #f0f2f5;
-  font-family: sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Card container */
 .login-card {
   background: white;
   padding: 40px;
   border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 350px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  max-width: 90%;
   text-align: center;
 }
 
-.logo-placeholder {
-  font-size: 2.5rem;
-  font-weight: bold; /* Fixed: 'font-bold' was the error */
-  color: #d32f2f;
+/* Logo / Brand */
+.brand-section {
+  margin-bottom: 25px;
 }
 
-.admin-theme {
-  background-color: #d32f2f;
-  color: white;
+.logo-placeholder {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+h2 {
+  margin-bottom: 5px;
+  color: #1976d2;
+}
+
+.brand-section p {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Input fields */
+.input-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.input-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #333;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.input-group input:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 5px rgba(25, 118, 210, 0.3);
+}
+
+/* Button */
+.login-btn {
   width: 100%;
   padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
+  transition: 0.3s;
+  background-color: #1976d2;
+  color: white;
+}
+
+.login-btn:hover {
+  background-color: #155a9c;
+}
+
+/* Footer links */
+.login-footer {
+  margin-top: 20px;
+}
+
+.login-footer a {
+  color: #1976d2;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.login-footer a:hover {
+  text-decoration: underline;
 }
