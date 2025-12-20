@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom"; // 1. Import Link
+import { Link } from "react-router-dom"; 
 import "./admin.css";
 
 export default function AdminDashboard() {
@@ -11,14 +11,13 @@ export default function AdminDashboard() {
         </div>
         <nav>
           <ul>
-            {/* 2. Use Link for sidebar items */}
             <li className="active"><Link to="/admin/dashboard">Dashboard</Link></li>
             <li><Link to="/admin/employees">Employees</Link></li>
             <li><Link to="/admin/attendance">Attendance</Link></li>
             <li><Link to="/admin/leave">Leave Requests</Link></li>
             <li><Link to="/admin/payroll">Payroll</Link></li>
-            <li><Link to="/admin/config">System Config</Link></li>
-            <li><Link to="/admin/reports">Reports</Link></li>
+            <li><Link to="/admin/system-config">System Config</Link></li>  {/* updated */}
+            <li><Link to="/admin/report">Reports</Link></li>
           </ul>
         </nav>
       </aside>
@@ -30,7 +29,6 @@ export default function AdminDashboard() {
         </header>
 
         <div className="stats-grid">
-          {/* 3. Wrap each card in a Link to make the whole card clickable */}
           <Link to="/admin/employees" className="stat-card">
             <div className="icon">👥</div>
             <h3>Employees</h3>
@@ -55,18 +53,17 @@ export default function AdminDashboard() {
             <p>Salary and Tax Processing</p>
           </Link>
           
-           <Link to="/admin/config" className="stat-card">
-            <div className="icon">📅</div>
-            <h3>Config</h3>
-            <p>Settings and Permissions</p>
+          <Link to="/admin/system-config" className="stat-card"> {/* updated */}
+            <div className="icon">⚙️</div>
+            <h3>System Config</h3>
+            <p>Settings and Parameters</p>
           </Link>
 
-          <Link to="/admin/reports" className="stat-card">
-            <div className="icon">📅</div>
+          <Link to="/admin/report" className="stat-card">
+            <div className="icon">📊</div>
             <h3>Reports</h3>
             <p>Financial Statements</p>
           </Link>
-
         </div>
       </main>
     </div>

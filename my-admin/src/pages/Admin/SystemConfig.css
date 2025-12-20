@@ -1,0 +1,132 @@
+.system-config-page {
+  min-height: 100vh;
+  padding: 20px;
+  background: #f5f9ff;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* vertical center */
+  align-items: center;     /* horizontal center */
+  gap: 20px;
+}
+
+/* Header */
+.config-header h1 {
+  color: #1976d2;
+  text-align: center;
+  margin-bottom: 5px;
+}
+.config-header p {
+  color: #555;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Container for cards + table */
+.config-container {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  max-width: 1200px;
+  height: 70vh; /* fit in single screen */
+}
+
+/* LEFT COLUMN: Cards */
+.config-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  flex: 1;
+  overflow: hidden; /* prevent scroll */
+  justify-content: space-between;
+}
+
+.config-card {
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.config-card .icon {
+  font-size: 24px;
+  color: #1976d2;
+}
+
+.config-card h3 {
+  color: #1976d2;
+  margin: 0;
+  font-size: 14px;
+}
+
+.config-card p {
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* RIGHT COLUMN: Table */
+.config-table-container {
+  flex: 2;
+  overflow: hidden;
+}
+
+.config-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  height: 100%;
+}
+
+.config-table th,
+.config-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #ddd;
+  font-size: 13px;
+}
+
+.config-table th {
+  background: #1976d2;
+  color: #fff;
+  text-align: left;
+}
+
+.config-table td input {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
+.config-table button {
+  padding: 4px 8px;
+  border: none;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.config-table button:hover {
+  background: #145a9d;
+}
+
+/* Responsive for smaller screens */
+@media (max-width: 900px) {
+  .config-container {
+    flex-direction: column;
+    height: auto;
+  }
+}
