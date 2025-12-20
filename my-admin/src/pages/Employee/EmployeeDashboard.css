@@ -1,0 +1,179 @@
+:root {
+  --primary: #1a73e8;
+  --primary-dark: #1557b0;
+  --secondary: #6c757d;
+  --dark-navy: #0d1b2a;
+  --bg-light: #f4f7fe; /* Lighter, cleaner grey-blue */
+  --white: #ffffff;
+  --text-main: #2d3436;
+  --text-muted: #636e72;
+  --glass: rgba(255, 255, 255, 0.95);
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-md: 0 8px 24px rgba(149, 157, 165, 0.1);
+  --radius: 12px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-main);
+  margin: 0;
+}
+
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* --- SIDEBAR REFINEMENT --- */
+.sidebar {
+  width: 280px;
+  background-color: var(--dark-navy);
+  color: white;
+  padding: 2.5rem 1.5rem;
+  position: fixed;
+  height: 100vh;
+  z-index: 100;
+}
+
+.logo-section h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 3rem;
+  border-left: 4px solid var(--primary);
+  padding-left: 15px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  margin: 10px 0;
+  border-radius: var(--radius);
+  color: #a0aec0;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.nav-item:hover, .nav-item.active {
+  background: rgba(26, 115, 232, 0.15);
+  color: white;
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+
+/* --- MAIN LAYOUT --- */
+.main-content {
+  margin-left: 280px;
+  flex: 1;
+  padding: 2rem 3rem;
+}
+
+/* --- ATTENDANCE FEATURE (GPS/SELF-SERVICE) --- */
+.attendance-card {
+  background: var(--white);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(0,0,0,0.05);
+  margin-bottom: 2rem;
+}
+
+.attendance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.attendance-controls {
+  display: flex;
+  gap: 12px;
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: var(--radius);
+  border: 1px dashed var(--primary);
+}
+
+/* --- PROFESSIONAL DATA TABLE --- */
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.data-table th {
+  padding: 15px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.data-table tr {
+  background: var(--white);
+  transition: var(--transition);
+}
+
+.data-table td {
+  padding: 18px 15px;
+  border-top: 1px solid #f1f3f4;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.data-table tr:hover {
+  transform: scale(1.01);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- BUTTONS & INPUTS --- */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px 0 rgba(26, 115, 232, 0.39);
+  transition: var(--transition);
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #e2e8f0;
+  color: var(--text-main);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+/* --- STATUS BADGES --- */
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-present { background: #dcfce7; color: #15803d; }
+.status-absent { background: #fee2e2; color: #b91c1c; }
+.status-pending { background: #fef9c3; color: #a16207; }
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .sidebar { width: 80px; padding: 1.5rem 0.5rem; }
+  .logo-section h2, .nav-item span { display: none; }
+  .main-content { margin-left: 80px; }
+}
