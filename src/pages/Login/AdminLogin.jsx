@@ -6,17 +6,40 @@ export default function AdminLogin({ setUser }) {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (email === "admin@nast.edu.np" && password === "admin123") {
-      const adminSession = { role: "admin", email: email };
-      localStorage.setItem("user_session", JSON.stringify(adminSession));
-      setUser(adminSession);
-      navigate("/admin/dashboard");
-    } else {
-      alert("Invalid Admin Credentials!");
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const response = await fetch("http://localhost:9090/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Invalid email or password");
     }
-  };
+
+    const data = await response.json();
+console.log("Login successful:", data);
+
+localStorage.setItem("user_session", JSON.stringify(data)); // store session
+setUser(data); // update React state
+navigate("/admin/dashboard"); // navigate to dashboard
+
+
+    // maybe store token if using JWT
+    // localStorage.setItem("token", data.token);
+
+
+
+  } catch (error) {
+    console.error("Error:", error.message);
+    alert("Login failed. Check your email and password.");
+  }
+};
+
+
 
   return (
     <div className="auth-container">

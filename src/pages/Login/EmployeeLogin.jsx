@@ -7,14 +7,28 @@ export default function EmployeeLogin({ setUser }) {
   const [password, setPassword] = useState("");
   const navigate = useNavigate(); 
 
-  const handleSubmit = (e) => {
+ // Handle form submission fetch request to backend
+   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Example credentials - update these based on your database
-    if (email && password) {
-      const employeeSession = { role: "employee", email: email };
-      localStorage.setItem("user_session", JSON.stringify(employeeSession));
-      setUser(employeeSession);
-      navigate("/employee/dashboard"); 
+
+    try {
+      const response = await fetch("http://localhost:9090/api/employee/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) throw new Error("Invalid email or password");
+
+      const data = await response.json();
+      console.log("Login successful:", data);
+
+      localStorage.setItem("user_session", JSON.stringify(data));
+      setUser(data);
+      navigate("/employee/dashboard"); // Redirect to accountant dashboard
+    } catch (error) {
+      console.error("Error:", error.message);
+      alert("Login failed. Check your email and password.");
     }
   };
 
