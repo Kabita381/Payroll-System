@@ -11,6 +11,19 @@ import { getDesignations } from "../../api/designationApi";
 import ConfirmModal from "../../components/ConfirmModal";
 import "./Employees.css";
 
+// MessageModal Component
+function MessageModal({ show, type, message, onClose }) {
+  if (!show) return null;
+  return (
+    <div className="message-modal-backdrop">
+      <div className={`message-modal ${type}`}>
+        <p>{message}</p>
+        <button onClick={onClose}>Dismiss</button>
+      </div>
+    </div>
+  );
+}
+
 export default function Employees() {
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -22,8 +35,8 @@ export default function Employees() {
   const [activeStats, setActiveStats] = useState({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+
+  const [messageData, setMessageData] = useState({ show: false, type: "", message: "" });
 
   useEffect(() => {
     fetchEmployees();
@@ -35,59 +48,90 @@ export default function Employees() {
   const fetchEmployees = async () => {
     try {
       const res = await getEmployees();
-      setEmployees(res.data);
+      setEmployees(res.data || []);
     } catch (err) {
-      console.error(err);
+      showMessage("error", "Failed to fetch employees");
     }
   };
 
   const fetchDepartments = async () => {
-    const depts = await getDepartments();
-    setDepartments(depts);
+    try {
+      const depts = await getDepartments();
+      setDepartments(depts);
+    } catch (err) {
+      showMessage("error", "Failed to fetch departments");
+    }
   };
 
   const fetchDesignations = async () => {
-    const desigs = await getDesignations();
-    setDesignations(desigs);
+    try {
+      const desigs = await getDesignations();
+      setDesignations(desigs);
+    } catch (err) {
+      showMessage("error", "Failed to fetch designations");
+    }
   };
 
   const fetchActiveStats = async () => {
     try {
       const res = await getActiveEmployeeStats();
-      setActiveStats(res.data);
+      setActiveStats(res.data || {});
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchId) return fetchEmployees();
-    try {
-      const res = await getEmployees(searchId);
-      setEmployees([res.data]);
-    } catch (err) {
-      console.error(err);
-      setEmployees([]);
-    }
+  const showMessage = (type, message) => {
+    setMessageData({ show: true, type, message });
   };
+
+  const closeMessage = () => {
+    setMessageData({ show: false, type: "", message: "" });
+  };
+
+const handleSearch = async () => {
+  if (!searchId) return fetchEmployees();
+
+  try {
+    const res = await getEmployees(searchId);
+
+    if (!res.data) {
+      setEmployees([]);
+      showMessage("error", `Employee with ID ${searchId} not found`);
+    } else {
+      setEmployees([res.data]);
+    }
+  } catch (err) {
+    setEmployees([]);
+
+    // Extract backend message
+    let errorMsg = "An error occurred while searching";
+    if (err.response && err.response.data && err.response.data.message) {
+      errorMsg = err.response.data.message; // Should be "Employee not found with id: X"
+    } else if (err.message) {
+      errorMsg = err.message;
+    }
+
+    showMessage("error", errorMsg);
+  }
+};
+
 
   const startEdit = (emp) => {
     setEditingId(emp.empId);
+    setAddingNew(false); // Close add row if open
     setFormData({
       ...emp,
       deptId: emp.department?.deptId,
       designationId: emp.position?.designationId,
     });
-    setErrorMsg("");
-    setSuccessMsg("");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setFormData({});
     setAddingNew(false);
-    setErrorMsg("");
-    setSuccessMsg("");
+    setFormData({});
+    fetchEmployees(); // Reload DB data
   };
 
   const saveEdit = async (id) => {
@@ -98,45 +142,39 @@ export default function Employees() {
         position: { designationId: formData.designationId },
       };
 
-      setErrorMsg("");
-      setSuccessMsg("");
-
       if (addingNew) {
         await createEmployee(payload);
-        setSuccessMsg("Employee successfully created!");
+        showMessage("success", "Employee successfully created!");
       } else {
         await updateEmployee(id, payload);
-        setSuccessMsg("Employee successfully updated!");
+        showMessage("success", "Employee successfully updated!");
       }
 
       fetchEmployees();
       fetchActiveStats();
-      cancelEdit();
+      setAddingNew(false);
+      setEditingId(null);
+      setFormData({});
     } catch (err) {
       console.error(err);
-      if (err.response && err.response.data && err.response.data.message) {
-        setErrorMsg(err.response.data.message);
-      } else {
-        setErrorMsg("An error occurred. Please try again.");
-      }
+      showMessage("error", "An error occurred. Please try again.");
     }
   };
 
   const handleDeleteClick = (id) => {
     setDeleteId(id);
     setShowConfirm(true);
-    setErrorMsg("");
-    setSuccessMsg("");
   };
 
   const confirmDelete = async () => {
     try {
       await deleteEmployee(deleteId);
-      setSuccessMsg("Employee successfully deleted!");
+      showMessage("success", "Employee successfully deleted!");
       fetchEmployees();
       fetchActiveStats();
     } catch (err) {
       console.error(err);
+      showMessage("error", "Failed to delete employee");
     } finally {
       setShowConfirm(false);
       setDeleteId(null);
@@ -160,8 +198,12 @@ export default function Employees() {
     <>
       <h1>Employees</h1>
 
-      {errorMsg && <div className="error-message">{errorMsg}</div>}
-      {successMsg && <div className="success-message">{successMsg}</div>}
+      <MessageModal
+        show={messageData.show}
+        type={messageData.type}
+        message={messageData.message}
+        onClose={closeMessage}
+      />
 
       <div className="search-container">
         <input
@@ -170,7 +212,7 @@ export default function Employees() {
           value={searchId}
           onChange={(e) => setSearchId(e.target.value)}
         />
-        <button onClick={handleSearch}>Search</button>
+        <button className="btn-small update" onClick={handleSearch}>Search</button>
       </div>
 
       <div className="active-stats">
@@ -188,9 +230,8 @@ export default function Employees() {
         className="add-btn"
         onClick={() => {
           setAddingNew(true);
+          setEditingId(null);
           setFormData({});
-          setErrorMsg("");
-          setSuccessMsg("");
         }}
       >
         Add New Employee
@@ -214,7 +255,7 @@ export default function Employees() {
               <th>Department</th>
               <th>Active</th>
               <th>Created At</th>
-              <th>Actions</th>
+              <th className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -249,9 +290,9 @@ export default function Employees() {
                 </td>
                 <td><input type="checkbox" name="isActive" checked={formData.isActive || false} onChange={handleChange} /></td>
                 <td>Auto</td>
-                <td>
-                  <button onClick={() => saveEdit(null)}>Save</button>
-                  <button onClick={cancelEdit}>Cancel</button>
+                <td className="actions-col">
+                  <button className="btn-small save" onClick={() => saveEdit(null)}>Save</button>
+                  <button className="btn-small cancel" onClick={cancelEdit}>Cancel</button>
                 </td>
               </tr>
             )}
@@ -265,46 +306,38 @@ export default function Employees() {
                 <td>{editingId === emp.empId ? <input name="email" value={formData.email} onChange={handleChange} /> : emp.email}</td>
                 <td>{editingId === emp.empId ? <input name="contact" value={formData.contact} onChange={handleChange} /> : emp.contact}</td>
                 <td>{editingId === emp.empId ? <input name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} /> : emp.maritalStatus}</td>
-                <td>
-                  {editingId === emp.empId ? (
-                    <select name="designationId" value={formData.designationId || ""} onChange={handleChange}>
-                      <option value="">Select Designation</option>
-                      {designations.map((d) => (
-                        <option key={d.designationId} value={d.designationId}>{d.designationTitle}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    emp.position?.designationTitle
-                  )}
-                </td>
+                <td>{editingId === emp.empId ? (
+                  <select name="designationId" value={formData.designationId || ""} onChange={handleChange}>
+                    <option value="">Select Designation</option>
+                    {designations.map((d) => (
+                      <option key={d.designationId} value={d.designationId}>{d.designationTitle}</option>
+                    ))}
+                  </select>
+                ) : emp.position?.designationTitle}</td>
                 <td>{editingId === emp.empId ? <input name="education" value={formData.education} onChange={handleChange} /> : emp.education}</td>
                 <td>{editingId === emp.empId ? <input name="employmentStatus" value={formData.employmentStatus} onChange={handleChange} /> : emp.employmentStatus}</td>
                 <td>{editingId === emp.empId ? <input type="date" name="joiningDate" value={formData.joiningDate} onChange={handleChange} /> : emp.joiningDate}</td>
                 <td>{editingId === emp.empId ? <input name="address" value={formData.address} onChange={handleChange} /> : emp.address}</td>
-                <td>
-                  {editingId === emp.empId ? (
-                    <select name="deptId" value={formData.deptId || ""} onChange={handleChange}>
-                      <option value="">Select Department</option>
-                      {departments.map((d) => (
-                        <option key={d.deptId} value={d.deptId}>{d.deptName}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    emp.department?.deptName
-                  )}
-                </td>
+                <td>{editingId === emp.empId ? (
+                  <select name="deptId" value={formData.deptId || ""} onChange={handleChange}>
+                    <option value="">Select Department</option>
+                    {departments.map((d) => (
+                      <option key={d.deptId} value={d.deptId}>{d.deptName}</option>
+                    ))}
+                  </select>
+                ) : emp.department?.deptName}</td>
                 <td>{editingId === emp.empId ? <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} /> : emp.isActive ? "Yes" : "No"}</td>
                 <td>{emp.createdAt}</td>
-                <td>
+                <td className="actions-col">
                   {editingId === emp.empId ? (
                     <>
-                      <button onClick={() => saveEdit(emp.empId)}>Save</button>
-                      <button onClick={cancelEdit}>Cancel</button>
+                      <button className="btn-small save" onClick={() => saveEdit(emp.empId)}>Save</button>
+                      <button className="btn-small cancel" onClick={cancelEdit}>Cancel</button>
                     </>
                   ) : (
                     <>
-                      <button onClick={() => startEdit(emp)}>Update</button>
-                      <button onClick={() => handleDeleteClick(emp.empId)}>Delete</button>
+                      <button className="btn-small update" onClick={() => startEdit(emp)}>Update</button>
+                      <button className="btn-small delete" onClick={() => handleDeleteClick(emp.empId)}>Delete</button>
                     </>
                   )}
                 </td>
