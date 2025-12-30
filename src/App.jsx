@@ -8,7 +8,7 @@ import AccountantLayout from "./components/AccountantLayout";
 
 /* ================= AUTH & PAGES ================= */
 import Landing from "./pages/Login/Landing.jsx";
-import ForgotPassword from "./pages/Common/ForgotPassword.jsx"; // ADD THIS
+import ForgotPassword from "./pages/Common/ForgotPassword.jsx";
 import ResetPassword from "./pages/Common/ResetPassword.jsx"; 
 
 /* ================= DASHBOARDS & SUBPAGES ================= */
@@ -22,6 +22,7 @@ import AccountantReport from "./pages/Accountant/Report.jsx";
 // ADMIN
 import AdminDashboard from "./pages/Admin/AdminDashboard.jsx";
 import Employees from "./pages/Admin/Employees.jsx";
+import AddEmployee from "./pages/Admin/AddEmployee.jsx"; // IMPORT THE NEW PAGE
 import Attendance from "./pages/Admin/Attendance.jsx";
 import Leave from "./pages/Admin/Leave.jsx";
 import AdminPayroll from "./pages/Admin/Payroll.jsx";
@@ -44,7 +45,6 @@ const ProtectedRoute = ({ allowedRole }) => {
   const userRole = user.role?.toUpperCase().trim(); 
   const requiredRole = allowedRole.toUpperCase().trim();
 
-  // If the user's role doesn't match, send them back to login
   if (userRole !== requiredRole) return <Navigate to="/" replace />;
   
   return <Outlet />;
@@ -61,10 +61,10 @@ function App() {
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Landing setUser={setUser} />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} /> {/* ADDED THIS ROUTE */}
+        <Route path="/forgot-password" element={<ForgotPassword />} /> 
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* PROTECTED ACCOUNTANT ROUTES (ROLE ID 3) */}
+        {/* PROTECTED ACCOUNTANT ROUTES */}
         <Route path="/accountant" element={<ProtectedRoute allowedRole="ROLE_ACCOUNTANT" />}>
           <Route element={<AccountantLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -76,12 +76,17 @@ function App() {
           </Route>
         </Route>
 
-        {/* PROTECTED ADMIN ROUTES (ROLE ID 1) */}
+        {/* PROTECTED ADMIN ROUTES */}
         <Route path="/admin" element={<ProtectedRoute allowedRole="ROLE_ADMIN" />}>
           <Route element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
+            
+            {/* EMPLOYEE MANAGEMENT ROUTES */}
             <Route path="employees" element={<Employees />} />
+            <Route path="employees/new" element={<AddEmployee />} /> {/* NEW: REGISTRATION PAGE */}
+            <Route path="employees/edit/:id" element={<AddEmployee />} /> {/* NEW: EDIT PAGE */}
+            
             <Route path="attendance" element={<Attendance />} />
             <Route path="leave" element={<Leave />} />
             <Route path="payroll" element={<AdminPayroll />} />
@@ -89,7 +94,7 @@ function App() {
           </Route>
         </Route>
 
-        {/* PROTECTED EMPLOYEE ROUTES (ROLE ID 4) */}
+        {/* PROTECTED EMPLOYEE ROUTES */}
         <Route path="/employee" element={<ProtectedRoute allowedRole="ROLE_EMPLOYEE" />}>
           <Route element={<EmployeeLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
