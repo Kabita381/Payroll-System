@@ -1,18 +1,15 @@
-import axios from "axios";
+// src/api/employeeApi.js
+import api from "./axios"; // your axios instance with interceptor
 
-const API_URL = "http://localhost:8080/api/employees";
-
-const getAuthHeaders = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-});
+const BASE_URL = "/employees";
 
 export const getEmployees = (id) =>
-  id ? axios.get(`${API_URL}/${id}`, getAuthHeaders()) : axios.get(API_URL, getAuthHeaders());
+  id ? api.get(`${BASE_URL}/${id}`) : api.get(BASE_URL);
 
-export const createEmployee = (employee) => axios.post(API_URL, employee, getAuthHeaders());
+export const createEmployee = (employee) => api.post(BASE_URL, employee);
 
-export const updateEmployee = (id, employee) => axios.put(`${API_URL}/${id}`, employee, getAuthHeaders());
+export const updateEmployee = (id, employee) => api.put(`${BASE_URL}/${id}`, employee);
 
-export const deleteEmployee = (id) => axios.delete(`${API_URL}/${id}`, getAuthHeaders());
+export const deleteEmployee = (id) => api.delete(`${BASE_URL}/${id}`);
 
-export const getActiveEmployeeStats = () => axios.get(`${API_URL}/stats/active-per-month`, getAuthHeaders());
+export const getActiveEmployeeStats = () => api.get(`${BASE_URL}/stats/active-per-month`);

@@ -8,7 +8,7 @@ const LeaveManagement = () => {
   const [balances, setBalances] = useState([]);
   const [leaveHistory, setLeaveHistory] = useState([]);
   const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState(""); // For backend errors
+  const [errorMsg, setErrorMsg] = useState(""); 
   const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({
@@ -17,6 +17,9 @@ const LeaveManagement = () => {
     endDate: "",
     reason: "",
   });
+
+  // Get today's date in YYYY-MM-DD format for the 'min' attribute
+  const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     loadLeaveData();
@@ -47,6 +50,23 @@ const LeaveManagement = () => {
     setSuccessMsg("");
     setErrorMsg("");
     
+    const start = new Date(formData.startDate);
+    const end = new Date(formData.endDate);
+    const now = new Date(today);
+
+    // --- VALIDATION LOGIC ---
+    if (start < now) {
+      setErrorMsg("Invalid Date: Start Date cannot be in the past.");
+      setTimeout(() => setErrorMsg(""), 5000);
+      return;
+    }
+
+    if (start > end) {
+      setErrorMsg("Invalid Range: Start Date cannot be later than End Date.");
+      setTimeout(() => setErrorMsg(""), 5000);
+      return;
+    }
+
     const payload = {
       employee: { empId: currentEmpId },
       leaveType: { leaveTypeId: parseInt(formData.leaveTypeId) },
@@ -61,15 +81,10 @@ const LeaveManagement = () => {
       setSuccessMsg("Application Sent Successfully!");
       setFormData({ leaveTypeId: "", startDate: "", endDate: "", reason: "" });
       loadLeaveData();
-      
-      // Auto-hide after 5 seconds
       setTimeout(() => setSuccessMsg(""), 5000);
     } catch (err) {
-      // Capture the specific error from backend (like the totalDays null error)
-      const msg = err.response?.data?.message || "Check backend constraints (e.g. totalDays null)";
+      const msg = err.response?.data?.message || "Check backend constraints.";
       setErrorMsg(`Failed: ${msg}`);
-      
-      // Auto-hide after 5 seconds
       setTimeout(() => setErrorMsg(""), 5000);
     }
   };
@@ -82,7 +97,6 @@ const LeaveManagement = () => {
         <h1>Leave Management Module</h1>
       </div>
 
-      {/* Message Notifications */}
       {successMsg && <div className="success-toast-message">{successMsg}</div>}
       {errorMsg && <div className="error-toast-message">{errorMsg}</div>}
 
@@ -115,11 +129,23 @@ const LeaveManagement = () => {
             <div className="form-field-row">
               <div className="date-group">
                 <label>From Date</label>
-                <input type="date" value={formData.startDate} onChange={(e)=>setFormData({...formData, startDate: e.target.value})} required />
+                <input 
+                  type="date" 
+                  value={formData.startDate} 
+                  min={today} // Prevents selecting dates before today
+                  onChange={(e)=>setFormData({...formData, startDate: e.target.value})} 
+                  required 
+                />
               </div>
               <div className="date-group">
                 <label>To Date</label>
-                <input type="date" value={formData.endDate} onChange={(e)=>setFormData({...formData, endDate: e.target.value})} required />
+                <input 
+                  type="date" 
+                  value={formData.endDate} 
+                  min={formData.startDate || today} // Prevents picking date before Start Date
+                  onChange={(e)=>setFormData({...formData, endDate: e.target.value})} 
+                  required 
+                />
               </div>
             </div>
 

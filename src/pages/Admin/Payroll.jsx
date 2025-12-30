@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../api/axios"; // Use your axios.js instance
 import "./Payroll.css";
 
 const PayrollAdmin = () => {
   const [payrollData, setPayrollData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  
-  // State must match the 'name' attributes of your inputs
   const [formData, setFormData] = useState({
     empId: "",
     grossSalary: "",
@@ -24,32 +22,31 @@ const PayrollAdmin = () => {
 
   const fetchPayrolls = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/payrolls");
-      setPayrollData(response.data);
+      const res = await api.get("/payrolls");
+      setPayrollData(Array.isArray(res.data) ? res.data : []);
       setLoading(false);
     } catch (err) {
+      console.error("Fetch Payroll Error:", err.response?.data || err.message);
       setLoading(false);
     }
   };
 
-  // CORRECTED AUTO-FILL LOGIC
   const handleFetchEmployeeDetails = async () => {
     if (!formData.empId) return;
     try {
-      const response = await axios.get(`http://localhost:8080/api/employees/${formData.empId}`);
-      const emp = response.data;
-      
+      const res = await api.get(`/employees/${formData.empId}`);
+      const emp = res.data;
+
       if (emp) {
-        // MUST map Java entity fields to React state fields
         setFormData(prev => ({
           ...prev,
-          grossSalary: emp.basicSalary ? emp.basicSalary.toString() : "", 
-          totalAllowances: emp.allowances ? emp.allowances.toString() : "0",
-          totalDeductions: emp.deductions ? emp.deductions.toString() : "0"
+          grossSalary: emp.basicSalary?.toString() || "",
+          totalAllowances: emp.allowances?.toString() || "0",
+          totalDeductions: emp.deductions?.toString() || "0"
         }));
       }
     } catch (err) {
-      console.error("Employee fetch error. Check if backend is running.");
+      console.error("Employee fetch error:", err.response?.data || err.message);
     }
   };
 
@@ -70,17 +67,17 @@ const PayrollAdmin = () => {
         paymentMethodId: parseInt(formData.paymentMethodId),
         payGroupId: parseInt(formData.payGroupId)
       };
-      await axios.post("http://localhost:8080/api/payrolls", payload);
+      await api.post("/payrolls", payload);
       alert("Payroll Processed Successfully!");
       setShowForm(false);
       setFormData({ empId: "", grossSalary: "", totalAllowances: "", totalDeductions: "", accountId: 1, paymentMethodId: 1, payGroupId: 1 });
       fetchPayrolls();
     } catch (err) {
-      alert("Error: Check if ID exists and all fields are filled.");
+      console.error("Payroll Save Error:", err.response?.data || err.message);
+      alert("Error: Check if Employee ID exists and all fields are valid.");
     }
   };
 
-  // Professional Printable Slip
   const handlePrint = (data) => {
     const printWindow = window.open("", "_blank", "width=800,height=700");
     printWindow.document.write(`
@@ -129,7 +126,7 @@ const PayrollAdmin = () => {
             <h2 style={{ fontSize: '24px', color: '#0f172a' }}>Payroll Management</h2>
             <p style={{ color: '#64748b' }}>Nepal Labor Act Compliance (FY 2081/82)</p>
           </div>
-          <button className="btn-cancel" onClick={() => setShowForm(!showForm)} 
+          <button className="btn-cancel" onClick={() => setShowForm(!showForm)}
                   style={{ background: '#0369a1', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer' }}>
             {showForm ? "Cancel Entry" : "+ New Payroll"}
           </button>

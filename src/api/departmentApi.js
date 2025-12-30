@@ -1,22 +1,9 @@
-import axios from "axios";
-const BASE_URL = "http://localhost:8080/api/departments";
+// src/api/departmentApi.js
+import api from "./axios";
 
-export const getDepartments = async () => {
-  const res = await axios.get(BASE_URL);
-  return res.data;
-};
+const BASE_URL = "/departments";
 
-export const createDepartment = async (data) => {
-  const res = await axios.post(BASE_URL, data);
-  return res.data;
-};
-
-export const updateDepartment = async (data) => {
-  const res = await axios.put(`${BASE_URL}/${data.id}`, data);
-  return res.data;
-};
-
-export const deleteDepartment = async (id) => {
-  const res = await axios.delete(`${BASE_URL}/${id}`);
-  return res.data;
-};
+export const getDepartments = () => api.get(BASE_URL);
+export const createDepartment = (data) => api.post(BASE_URL, data);
+export const updateDepartment = (id, data) => api.put(`${BASE_URL}/${id}`, data);
+export const deleteDepartment = (id) => api.delete(`${BASE_URL}/${id}`);

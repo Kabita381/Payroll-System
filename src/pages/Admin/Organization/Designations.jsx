@@ -1,10 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { 
-  getDesignations, 
-  createDesignation, 
-  updateDesignation, 
-  deleteDesignation 
-} from "../../../api/designationApi";
+import api from "../../../api/axios"; // centralized axios with JWT
 import ConfirmModal from "../../../components/ConfirmModal";
 import "./Designations.css";
 
@@ -25,7 +20,7 @@ export default function Designations() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ designationTitle: "" });
   const [addingNew, setAddingNew] = useState(false);
-  
+
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [messageData, setMessageData] = useState({ show: false, type: "", message: "" });
@@ -34,10 +29,10 @@ export default function Designations() {
 
   const fetchDesignations = async () => {
     try {
-      const data = await getDesignations();
-      setDesignations(Array.isArray(data) ? data : []);
+      const res = await api.get("/designations");
+      setDesignations(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      showMessage("error", "Database connection failed");
+      showMessage("error", "Failed to fetch designations. Permission denied or backend error.");
     }
   };
 
@@ -64,26 +59,26 @@ export default function Designations() {
     try {
       const payload = { designationTitle: formData.designationTitle };
       if (addingNew) {
-        await createDesignation(payload);
+        await api.post("/designations", payload);
         showMessage("success", "Designation Created!");
       } else {
-        await updateDesignation(id, payload);
+        await api.put(`/designations/${id}`, payload);
         showMessage("success", "Designation Updated!");
       }
       fetchDesignations();
       cancelEdit();
     } catch (err) {
-      showMessage("error", "Action failed");
+      showMessage("error", err.response?.data?.message || "Operation failed");
     }
   };
 
   const confirmDelete = async () => {
     try {
-      await deleteDesignation(deleteId);
+      await api.delete(`/designations/${deleteId}`);
       showMessage("success", "Deleted Successfully!");
       fetchDesignations();
     } catch {
-      showMessage("error", "Cannot delete: record is in use");
+      showMessage("error", "Cannot delete: record might be in use or permission denied");
     } finally {
       setShowConfirm(false);
     }
@@ -92,10 +87,10 @@ export default function Designations() {
   return (
     <div className="org-section desg-theme">
       <MessageModal {...messageData} onClose={closeMessage} />
-      
+
       <div className="section-header">
         <h3>Designations</h3>
-        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({designationTitle: ""}); }}>
+        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({ designationTitle: "" }); }}>
           + Add New Designation
         </button>
       </div>
@@ -114,10 +109,10 @@ export default function Designations() {
               <tr className="adding-row">
                 <td>New</td>
                 <td>
-                  <input 
-                    autoFocus 
-                    value={formData.designationTitle} 
-                    onChange={(e) => setFormData({designationTitle: e.target.value})} 
+                  <input
+                    autoFocus
+                    value={formData.designationTitle}
+                    onChange={(e) => setFormData({ designationTitle: e.target.value })}
                     placeholder="Enter title..."
                   />
                 </td>
@@ -127,14 +122,14 @@ export default function Designations() {
                 </td>
               </tr>
             )}
-            {designations.map((desg) => (
+            {Array.isArray(designations) && designations.map((desg) => (
               <tr key={desg.designationId}>
                 <td>{desg.designationId}</td>
                 <td>
                   {editingId === desg.designationId ? (
-                    <input 
-                      value={formData.designationTitle} 
-                      onChange={(e) => setFormData({designationTitle: e.target.value})} 
+                    <input
+                      value={formData.designationTitle}
+                      onChange={(e) => setFormData({ designationTitle: e.target.value })}
                     />
                   ) : (
                     desg.designationTitle
@@ -159,10 +154,10 @@ export default function Designations() {
         </table>
       </div>
 
-      <ConfirmModal 
-        show={showConfirm} 
-        onConfirm={confirmDelete} 
-        onCancel={() => setShowConfirm(false)} 
+      <ConfirmModal
+        show={showConfirm}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowConfirm(false)}
         message="Are you sure you want to delete this designation?"
       />
     </div>

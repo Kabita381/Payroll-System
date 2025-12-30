@@ -37,13 +37,15 @@ export default function Employees() {
   const [activeStats, setActiveStats] = useState({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
-
   const [messageData, setMessageData] = useState({
     show: false,
     type: "",
     message: "",
   });
 
+  /* =========================
+     INITIAL FETCH
+     ========================= */
   useEffect(() => {
     fetchEmployees();
     fetchDepartments();
@@ -58,23 +60,28 @@ export default function Employees() {
     try {
       const res = await getEmployees();
       setEmployees(res.data || []);
-    } catch {
+    } catch (err) {
+      console.error("Fetch employees failed:", err);
       showMessage("error", "Failed to fetch employees");
     }
   };
 
   const fetchDepartments = async () => {
     try {
-      setDepartments(await getDepartments());
-    } catch {
+      const res = await getDepartments();
+      setDepartments(res.data || []);
+    } catch (err) {
+      console.error("Fetch departments failed:", err);
       showMessage("error", "Failed to fetch departments");
     }
   };
 
   const fetchDesignations = async () => {
     try {
-      setDesignations(await getDesignations());
-    } catch {
+      const res = await getDesignations();
+      setDesignations(res.data || []);
+    } catch (err) {
+      console.error("Fetch designations failed:", err);
       showMessage("error", "Failed to fetch designations");
     }
   };
@@ -83,7 +90,9 @@ export default function Employees() {
     try {
       const res = await getActiveEmployeeStats();
       setActiveStats(res.data || {});
-    } catch {}
+    } catch (err) {
+      console.error("Fetch active stats failed:", err);
+    }
   };
 
   /* =========================
@@ -99,7 +108,6 @@ export default function Employees() {
 
   /* =========================
      EMAIL UNIQUENESS CHECK
-     NEW FEATURE
      ========================= */
   const emailExists = (email, currentId = null) => {
     return employees.some(
@@ -124,12 +132,12 @@ export default function Employees() {
         setEmployees([res.data]);
       }
     } catch (err) {
+      console.error("Search failed:", err);
       setEmployees([]);
-      const errorMsg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "An error occurred while searching";
-      showMessage("error", errorMsg);
+      showMessage(
+        "error",
+        err?.response?.data?.message || "An error occurred while searching"
+      );
     }
   };
 
@@ -155,10 +163,9 @@ export default function Employees() {
 
   /* =========================
      SAVE (CREATE + UPDATE)
-     WITH EMAIL CHECK
      ========================= */
   const saveEdit = async (id) => {
-    // FRONTEND EMAIL VALIDATION
+    // EMAIL VALIDATION
     if (formData.email && emailExists(formData.email, addingNew ? null : id)) {
       showMessage("error", "Email already exists");
       return;
@@ -185,9 +192,9 @@ export default function Employees() {
       setEditingId(null);
       setFormData({});
     } catch (err) {
+      console.error("Save failed:", err);
       const msg =
-        err?.response?.data?.message ||
-        "An error occurred. Please try again.";
+        err?.response?.data?.message || "An error occurred. Please try again.";
       showMessage("error", msg);
     }
   };
@@ -206,7 +213,8 @@ export default function Employees() {
       showMessage("success", "Employee successfully deleted!");
       fetchEmployees();
       fetchActiveStats();
-    } catch {
+    } catch (err) {
+      console.error("Delete failed:", err);
       showMessage("error", "Failed to delete employee");
     } finally {
       setShowConfirm(false);
@@ -312,10 +320,8 @@ export default function Employees() {
                 <td>
                   <select name="designationId" value={formData.designationId || ""} onChange={handleChange}>
                     <option value="">Select Designation</option>
-                    {designations.map((d) => (
-                      <option key={d.designationId} value={d.designationId}>
-                        {d.designationTitle}
-                      </option>
+                    {designations?.map((d) => (
+                      <option key={d.designationId} value={d.designationId}>{d.designationTitle}</option>
                     ))}
                   </select>
                 </td>
@@ -326,10 +332,8 @@ export default function Employees() {
                 <td>
                   <select name="deptId" value={formData.deptId || ""} onChange={handleChange}>
                     <option value="">Select Department</option>
-                    {departments.map((d) => (
-                      <option key={d.deptId} value={d.deptId}>
-                        {d.deptName}
-                      </option>
+                    {departments?.map((d) => (
+                      <option key={d.deptId} value={d.deptId}>{d.deptName}</option>
                     ))}
                   </select>
                 </td>
@@ -343,7 +347,7 @@ export default function Employees() {
             )}
 
             {/* EXISTING EMPLOYEES */}
-            {employees.map((emp) => (
+            {employees?.map((emp) => (
               <tr key={emp.empId}>
                 <td>{emp.empId}</td>
                 <td>{editingId === emp.empId ? <input name="firstName" value={formData.firstName} onChange={handleChange} /> : emp.firstName}</td>
@@ -355,10 +359,8 @@ export default function Employees() {
                   {editingId === emp.empId ? (
                     <select name="designationId" value={formData.designationId || ""} onChange={handleChange}>
                       <option value="">Select Designation</option>
-                      {designations.map((d) => (
-                        <option key={d.designationId} value={d.designationId}>
-                          {d.designationTitle}
-                        </option>
+                      {designations?.map((d) => (
+                        <option key={d.designationId} value={d.designationId}>{d.designationTitle}</option>
                       ))}
                     </select>
                   ) : emp.position?.designationTitle}
@@ -367,18 +369,14 @@ export default function Employees() {
                 <td>{editingId === emp.empId ? <input name="employmentStatus" value={formData.employmentStatus} onChange={handleChange} /> : emp.employmentStatus}</td>
                 <td>{editingId === emp.empId ? <input type="date" name="joiningDate" value={formData.joiningDate} onChange={handleChange} /> : emp.joiningDate}</td>
                 <td>{editingId === emp.empId ? <input name="address" value={formData.address} onChange={handleChange} /> : emp.address}</td>
-                <td>
-                  {editingId === emp.empId ? (
-                    <select name="deptId" value={formData.deptId || ""} onChange={handleChange}>
-                      <option value="">Select Department</option>
-                      {departments.map((d) => (
-                        <option key={d.deptId} value={d.deptId}>
-                          {d.deptName}
-                        </option>
-                      ))}
-                    </select>
-                  ) : emp.department?.deptName}
-                </td>
+                <td>{editingId === emp.empId ? (
+                  <select name="deptId" value={formData.deptId || ""} onChange={handleChange}>
+                    <option value="">Select Department</option>
+                    {departments?.map((d) => (
+                      <option key={d.deptId} value={d.deptId}>{d.deptName}</option>
+                    ))}
+                  </select>
+                ) : emp.department?.deptName}</td>
                 <td>{editingId === emp.empId ? <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} /> : emp.isActive ? "Yes" : "No"}</td>
                 <td>{emp.createdAt}</td>
                 <td className="actions-col">

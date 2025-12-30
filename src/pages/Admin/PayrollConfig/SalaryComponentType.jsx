@@ -1,76 +1,124 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../../api/axios"; // centralized axios instance
 import ConfirmModal from "../../../components/ConfirmModal";
 import "./PayrollConfig.css";
 
-export default function SalaryComponentType() {
+export default function SalaryComponents() {
+  const [components, setComponents] = useState([]);
   const [types, setTypes] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [addingNew, setAddingNew] = useState(false);
-  const [formData, setFormData] = useState({ name: "", description: "" });
-  
+  const [formData, setFormData] = useState({
+    componentName: "",
+    componentTypeId: "",
+    calculationMethod: "fixed",
+    defaultValue: 0,
+    description: "",
+    required: false
+  });
+
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
-  const API_URL = "http://localhost:8080/api/salary-component-types";
+  const COMPONENT_API = "/salary-components";
+  const TYPE_API = "/salary-component-types";
 
   useEffect(() => {
+    fetchComponents();
     fetchTypes();
   }, []);
 
-  const fetchTypes = async () => {
+  const fetchComponents = async () => {
     try {
-      const res = await axios.get(API_URL);
-      setTypes(Array.isArray(res.data) ? res.data : []);
+      const res = await api.get(COMPONENT_API);
+      setComponents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Failed to fetch salary component types", err);
+      console.error("Error fetching salary components", err);
     }
   };
 
-  const startEdit = (type) => {
-    setEditingId(type.componentTypeId);
+  const fetchTypes = async () => {
+    try {
+      const res = await api.get(TYPE_API);
+      setTypes(res.data);
+    } catch (err) {
+      console.error("Error fetching component types", err);
+    }
+  };
+
+  const startEdit = (item) => {
+    setEditingId(item.componentId);
     setAddingNew(false);
-    setFormData({ name: type.name, description: type.description });
+    setFormData({
+      componentName: item.componentName,
+      componentTypeId: item.componentType.componentTypeId,
+      calculationMethod: item.calculationMethod,
+      defaultValue: item.defaultValue,
+      description: item.description,
+      required: item.required
+    });
   };
 
   const cancel = () => {
     setEditingId(null);
     setAddingNew(false);
-    setFormData({ name: "", description: "" });
+    setFormData({
+      componentName: "",
+      componentTypeId: "",
+      calculationMethod: "fixed",
+      defaultValue: 0,
+      description: "",
+      required: false
+    });
   };
 
-  const saveEdit = async (id) => {
-    if (!formData.name.trim()) return;
+  const saveAction = async (id) => {
+    if (!formData.componentName || !formData.componentTypeId) return;
+    const payload = {
+      ...formData,
+      componentType: { componentTypeId: formData.componentTypeId }
+    };
     try {
-      if (addingNew) {
-        await axios.post(API_URL, formData);
-      } else {
-        await axios.put(`${API_URL}/${id}`, formData);
-      }
-      fetchTypes();
+      if (addingNew) await api.post(COMPONENT_API, payload);
+      else await api.put(`${COMPONENT_API}/${id}`, payload);
+      fetchComponents();
       cancel();
     } catch (err) {
-      alert("Error saving component type. Ensure name is unique.");
+      alert("Save failed. Check input or backend validation.");
     }
   };
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`${API_URL}/${deleteId}`);
-      fetchTypes();
+      await api.delete(`${COMPONENT_API}/${deleteId}`);
+      fetchComponents();
       setShowConfirm(false);
-    } catch (err) {
-      alert("Cannot delete: Type might be in use by Salary Components.");
+    } catch {
+      alert("Cannot delete. Component may be in use.");
       setShowConfirm(false);
     }
   };
 
   return (
-    <div className="org-section payroll-theme-alt">
+    <div className="org-section payroll-theme-alt column-half">
       <div className="section-header">
-        <h3>Component Types</h3>
-        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({name:"", description:""}); }}>
-          + Add Type
+        <h3>Salary Components</h3>
+        <button
+          className="add-btn"
+          onClick={() => {
+            setAddingNew(true);
+            setEditingId(null);
+            setFormData({
+              componentName: "",
+              componentTypeId: "",
+              calculationMethod: "fixed",
+              defaultValue: 0,
+              description: "",
+              required: false
+            });
+          }}
+        >
+          + Add Component
         </button>
       </div>
 
@@ -78,73 +126,206 @@ export default function SalaryComponentType() {
         <table className="org-table">
           <thead>
             <tr>
-              <th style={{ width: '12%' }}>ID</th>
-              <th style={{ width: '30%' }}>Name</th>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Method</th>
+              <th>Default</th>
               <th>Description</th>
-              <th style={{ textAlign: 'center', width: '25%' }}>Actions</th>
+              <th>Required</th>
+              <th style={{ textAlign: "center", width: "20%" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {/* Adding New Row */}
             {addingNew && (
               <tr className="adding-row">
-                <td className="read-only-id">New</td>
+                <td>New</td>
                 <td>
-                  <input 
+                  <input
                     autoFocus
-                    value={formData.name} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                    placeholder="e.g. Allowance"
+                    value={formData.componentName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, componentName: e.target.value })
+                    }
                   />
                 </td>
                 <td>
-                  <input 
-                    value={formData.description} 
-                    onChange={e => setFormData({...formData, description: e.target.value})} 
-                    placeholder="Short description..."
+                  <select
+                    value={formData.componentTypeId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, componentTypeId: e.target.value })
+                    }
+                  >
+                    <option value="">Select Type</option>
+                    {types.map((t) => (
+                      <option key={t.componentTypeId} value={t.componentTypeId}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <select
+                    value={formData.calculationMethod}
+                    onChange={(e) =>
+                      setFormData({ ...formData, calculationMethod: e.target.value })
+                    }
+                  >
+                    <option value="fixed">Fixed</option>
+                    <option value="percentage_of_basic">Percentage of Basic</option>
+                    <option value="formula">Formula</option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={formData.defaultValue}
+                    onChange={(e) =>
+                      setFormData({ ...formData, defaultValue: e.target.value })
+                    }
                   />
                 </td>
-                <td style={{ textAlign: 'center' }}>
-                  <button className="btn-small save" onClick={() => saveEdit(null)}>Save</button>
-                  <button className="btn-small cancel" onClick={cancel}>Cancel</button>
+                <td>
+                  <input
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                  />
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.required}
+                    onChange={(e) =>
+                      setFormData({ ...formData, required: e.target.checked })
+                    }
+                  />
+                </td>
+                <td>
+                  <button className="btn-small save" onClick={() => saveAction(null)}>
+                    Save
+                  </button>
+                  <button className="btn-small cancel" onClick={cancel}>
+                    Cancel
+                  </button>
                 </td>
               </tr>
             )}
 
-            {/* Existing Data Rows */}
-            {types.map((type) => (
-              <tr key={type.componentTypeId}>
-                <td className="read-only-id">{type.componentTypeId}</td>
+            {components.map((c) => (
+              <tr key={c.componentId}>
+                <td>{c.componentId}</td>
                 <td>
-                  {editingId === type.componentTypeId ? (
-                    <input 
-                      value={formData.name} 
-                      onChange={e => setFormData({...formData, name: e.target.value})} 
+                  {editingId === c.componentId ? (
+                    <input
+                      value={formData.componentName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, componentName: e.target.value })
+                      }
                     />
                   ) : (
-                    type.name
+                    c.componentName
                   )}
                 </td>
                 <td>
-                  {editingId === type.componentTypeId ? (
-                    <input 
-                      value={formData.description} 
-                      onChange={e => setFormData({...formData, description: e.target.value})} 
-                    />
+                  {editingId === c.componentId ? (
+                    <select
+                      value={formData.componentTypeId}
+                      onChange={(e) =>
+                        setFormData({ ...formData, componentTypeId: e.target.value })
+                      }
+                    >
+                      {types.map((t) => (
+                        <option key={t.componentTypeId} value={t.componentTypeId}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
-                    type.description
+                    c.componentType.name
                   )}
                 </td>
-                <td style={{ textAlign: 'center' }}>
-                  {editingId === type.componentTypeId ? (
+                <td>
+                  {editingId === c.componentId ? (
+                    <select
+                      value={formData.calculationMethod}
+                      onChange={(e) =>
+                        setFormData({ ...formData, calculationMethod: e.target.value })
+                      }
+                    >
+                      <option value="fixed">Fixed</option>
+                      <option value="percentage_of_basic">Percentage of Basic</option>
+                      <option value="formula">Formula</option>
+                    </select>
+                  ) : (
+                    c.calculationMethod
+                  )}
+                </td>
+                <td>
+                  {editingId === c.componentId ? (
+                    <input
+                      type="number"
+                      value={formData.defaultValue}
+                      onChange={(e) =>
+                        setFormData({ ...formData, defaultValue: e.target.value })
+                      }
+                    />
+                  ) : (
+                    c.defaultValue
+                  )}
+                </td>
+                <td>
+                  {editingId === c.componentId ? (
+                    <input
+                      value={formData.description}
+                      onChange={(e) =>
+                        setFormData({ ...formData, description: e.target.value })
+                      }
+                    />
+                  ) : (
+                    c.description
+                  )}
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  {editingId === c.componentId ? (
+                    <input
+                      type="checkbox"
+                      checked={formData.required}
+                      onChange={(e) =>
+                        setFormData({ ...formData, required: e.target.checked })
+                      }
+                    />
+                  ) : c.required ? (
+                    "✅"
+                  ) : (
+                    "❌"
+                  )}
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  {editingId === c.componentId ? (
                     <>
-                      <button className="btn-small save" onClick={() => saveEdit(type.componentTypeId)}>Save</button>
-                      <button className="btn-small cancel" onClick={cancel}>Cancel</button>
+                      <button className="btn-small save" onClick={() => saveAction(c.componentId)}>
+                        Save
+                      </button>
+                      <button className="btn-small cancel" onClick={cancel}>
+                        Cancel
+                      </button>
                     </>
                   ) : (
                     <>
-                      <button className="btn-small update" onClick={() => startEdit(type)}>Edit</button>
-                      <button className="btn-small delete" onClick={() => { setDeleteId(type.componentTypeId); setShowConfirm(true); }}>Delete</button>
+                      <button className="btn-small update" onClick={() => startEdit(c)}>
+                        Edit
+                      </button>
+                      <button
+                        className="btn-small delete"
+                        onClick={() => {
+                          setDeleteId(c.componentId);
+                          setShowConfirm(true);
+                        }}
+                      >
+                        Delete
+                      </button>
                     </>
                   )}
                 </td>
@@ -154,11 +335,11 @@ export default function SalaryComponentType() {
         </table>
       </div>
 
-      <ConfirmModal 
-        show={showConfirm} 
-        onConfirm={handleDelete} 
-        onCancel={() => setShowConfirm(false)} 
-        message="Are you sure? This will remove this classification type."
+      <ConfirmModal
+        show={showConfirm}
+        onConfirm={handleDelete}
+        onCancel={() => setShowConfirm(false)}
+        message="Delete this component? This may affect payroll calculations."
       />
     </div>
   );

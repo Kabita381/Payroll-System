@@ -1,27 +1,9 @@
-import axios from "axios";
+// src/api/designationApi.js
+import api from "./axios";
 
-const BASE_URL = "http://localhost:8080/api/designations"; // Change this to your backend endpoint
+const BASE_URL = "/designations";
 
-// Get all designations
-export const getDesignations = async () => {
-  const res = await axios.get(BASE_URL);
-  return res.data;
-};
-
-// Create a new designation
-export const createDesignation = async (data) => {
-  const res = await axios.post(BASE_URL, data);
-  return res.data;
-};
-
-// Update a designation
-export const updateDesignation = async (data) => {
-  const res = await axios.put(`${BASE_URL}/${data.id}`, data);
-  return res.data;
-};
-
-// Delete a designation
-export const deleteDesignation = async (id) => {
-  const res = await axios.delete(`${BASE_URL}/${id}`);
-  return res.data;
-};
+export const getDesignations = () => api.get(BASE_URL);
+export const createDesignation = (data) => api.post(BASE_URL, data);
+export const updateDesignation = (id, data) => api.put(`${BASE_URL}/${id}`, data);
+export const deleteDesignation = (id) => api.delete(`${BASE_URL}/${id}`);

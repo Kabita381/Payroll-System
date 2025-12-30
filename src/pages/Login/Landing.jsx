@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+// Import your custom api instance instead of the global axios
+import api from "../../api/axios";
 import './login.css';
 
 const Landing = ({ setUser }) => {
@@ -16,21 +17,42 @@ const Landing = ({ setUser }) => {
         setError('');
 
         try {
-            const response = await axios.post('http://localhost:8080/api/auth/login', credentials);
+            // Using the 'api' instance. Path is relative to the baseURL set in axios.js
+            const response = await api.post('/auth/login', credentials);
+            
+            /** * userData now contains: userId, username, email, role, and token 
+             * because of our backend AuthServiceImpl update.
+             */
             const userData = response.data; 
 
+            // Save the session (including the JWT token) to localStorage
             localStorage.setItem("user_session", JSON.stringify(userData));
+            
+            // Update global state
             setUser(userData);
 
-            // Redirect based on Role IDs (1=Admin, 3=Accountant, 4=Employee)
-            const role = userData.role.toUpperCase();
-            if (role === 'ROLE_ADMIN' || role === 'ADMIN') navigate('/admin/dashboard');
-            else if (role === 'ROLE_ACCOUNTANT' || role === 'ACCOUNTANT') navigate('/accountant/dashboard');
-            else if (role === 'ROLE_EMPLOYEE' || role === 'EMPLOYEE') navigate('/employee/dashboard');
-            else setError("Access Denied: Role not recognized.");
+            // Redirect based on the mapped role names from your backend
+            const role = userData.role; 
+            
+            if (role === 'ROLE_ADMIN') {
+                navigate('/admin/dashboard');
+            } else if (role === 'ROLE_ACCOUNTANT') {
+                navigate('/accountant/dashboard');
+            } else if (role === 'ROLE_EMPLOYEE') {
+                navigate('/employee/dashboard');
+            } else {
+                setError("Access Denied: Role not recognized.");
+            }
 
         } catch (err) {
-            setError(err.response?.status === 401 ? "Bad credentials" : "Server Connection Error");
+            // Handle error response from Spring Security
+            if (err.response?.status === 401) {
+                setError("Invalid username or password.");
+            } else if (err.response?.status === 403) {
+                setError("Your account does not have access rights.");
+            } else {
+                setError("Server connection error. Please try again later.");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -38,7 +60,7 @@ const Landing = ({ setUser }) => {
 
     // Handler for Trouble Signing In Button
     const handleTrouble = () => {
-        navigate('/forgot-password'); // Redirects to the forgot password route
+        navigate('/forgot-password');
     };
 
     return (
@@ -57,6 +79,7 @@ const Landing = ({ setUser }) => {
                             type="text" 
                             placeholder="Enter your username" 
                             required 
+                            autoComplete="username"
                             onChange={(e) => setCredentials({...credentials, username: e.target.value})} 
                         />
                     </div>
@@ -67,6 +90,7 @@ const Landing = ({ setUser }) => {
                             type="password" 
                             placeholder="••••••••" 
                             required 
+                            autoComplete="current-password"
                             onChange={(e) => setCredentials({...credentials, password: e.target.value})} 
                         />
                     </div>
@@ -78,7 +102,6 @@ const Landing = ({ setUser }) => {
                     </button>
                 </form>
 
-                {/* Fixed functional button */}
                 <button 
                     type="button" 
                     className="trouble-link" 

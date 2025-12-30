@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getRoles, createRole, updateRole, deleteRole } from "../../../api/roleApi";
+import api from "../../../api/axios"; // centralized axios with JWT
 import ConfirmModal from "../../../components/ConfirmModal";
 import "./Roles.css";
 
@@ -20,7 +20,7 @@ export default function Roles() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ roleName: "" });
   const [addingNew, setAddingNew] = useState(false);
-  
+
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [messageData, setMessageData] = useState({ show: false, type: "", message: "" });
@@ -29,10 +29,10 @@ export default function Roles() {
 
   const fetchRoles = async () => {
     try {
-      const data = await getRoles();
-      setRoles(Array.isArray(data) ? data : []);
+      const res = await api.get("/roles");
+      setRoles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      showMessage("error", "Failed to connect to Role database");
+      showMessage("error", "Failed to fetch roles. Permission denied or backend error.");
     }
   };
 
@@ -59,26 +59,26 @@ export default function Roles() {
     try {
       const payload = { roleName: formData.roleName };
       if (addingNew) {
-        await createRole(payload);
+        await api.post("/roles", payload);
         showMessage("success", "Role Created!");
       } else {
-        await updateRole(id, payload);
+        await api.put(`/roles/${id}`, payload);
         showMessage("success", "Role Updated!");
       }
       fetchRoles();
       cancelEdit();
     } catch (err) {
-      showMessage("error", "Action failed: Name might already exist");
+      showMessage("error", err.response?.data?.message || "Action failed: Name might already exist");
     }
   };
 
   const confirmDelete = async () => {
     try {
-      await deleteRole(deleteId);
+      await api.delete(`/roles/${deleteId}`);
       showMessage("success", "Role Deleted!");
       fetchRoles();
     } catch {
-      showMessage("error", "Cannot delete: Role is assigned to users");
+      showMessage("error", "Cannot delete: Role is assigned to users or permission denied");
     } finally {
       setShowConfirm(false);
     }
@@ -87,10 +87,10 @@ export default function Roles() {
   return (
     <div className="org-section role-theme">
       <MessageModal {...messageData} onClose={closeMessage} />
-      
+
       <div className="section-header">
         <h3>User Roles</h3>
-        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({roleName: ""}); }}>
+        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({ roleName: "" }); }}>
           + Add New Role
         </button>
       </div>
@@ -109,10 +109,10 @@ export default function Roles() {
               <tr className="adding-row">
                 <td>New</td>
                 <td>
-                  <input 
-                    autoFocus 
-                    value={formData.roleName} 
-                    onChange={(e) => setFormData({roleName: e.target.value})} 
+                  <input
+                    autoFocus
+                    value={formData.roleName}
+                    onChange={(e) => setFormData({ roleName: e.target.value })}
                     placeholder="E.g. ROLE_ADMIN"
                   />
                 </td>
@@ -122,14 +122,14 @@ export default function Roles() {
                 </td>
               </tr>
             )}
-            {roles.map((role) => (
+            {Array.isArray(roles) && roles.map((role) => (
               <tr key={role.roleId}>
                 <td>{role.roleId}</td>
                 <td>
                   {editingId === role.roleId ? (
-                    <input 
-                      value={formData.roleName} 
-                      onChange={(e) => setFormData({roleName: e.target.value})} 
+                    <input
+                      value={formData.roleName}
+                      onChange={(e) => setFormData({ roleName: e.target.value })}
                     />
                   ) : (
                     role.roleName
@@ -154,10 +154,10 @@ export default function Roles() {
         </table>
       </div>
 
-      <ConfirmModal 
-        show={showConfirm} 
-        onConfirm={confirmDelete} 
-        onCancel={() => setShowConfirm(false)} 
+      <ConfirmModal
+        show={showConfirm}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowConfirm(false)}
         message="Delete this role? This may affect user permissions."
       />
     </div>

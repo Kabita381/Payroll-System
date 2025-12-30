@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../../api/departmentApi";
+import api from "../../../api/axios"; // updated relative path
 import ConfirmModal from "../../../components/ConfirmModal";
 import "./Departments.css";
 
@@ -28,10 +28,10 @@ export default function Departments() {
 
   const fetchDepartments = async () => {
     try {
-      const data = await getDepartments();
-      setDepartments(data || []);
+      const res = await api.get("/departments");
+      setDepartments(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      showMessage("error", "Failed to connect to backend server");
+      showMessage("error", "Failed to connect to backend server or permission denied (403)");
     }
   };
 
@@ -57,10 +57,10 @@ export default function Departments() {
     }
     try {
       if (addingNew) {
-        await createDepartment({ deptName: formData.deptName });
+        await api.post("/departments", { deptName: formData.deptName });
         showMessage("success", "Department Created!");
       } else {
-        await updateDepartment(id, { deptName: formData.deptName });
+        await api.put(`/departments/${id}`, { deptName: formData.deptName });
         showMessage("success", "Department Updated!");
       }
       fetchDepartments();
@@ -72,11 +72,11 @@ export default function Departments() {
 
   const confirmDelete = async () => {
     try {
-      await deleteDepartment(deleteId);
+      await api.delete(`/departments/${deleteId}`);
       showMessage("success", "Deleted successfully");
       fetchDepartments();
     } catch {
-      showMessage("error", "Cannot delete: Department might be in use");
+      showMessage("error", "Cannot delete: Department might be in use or permission denied");
     } finally {
       setShowConfirm(false);
     }
@@ -87,7 +87,7 @@ export default function Departments() {
       <MessageModal {...messageData} onClose={closeMessage} />
       <div className="section-header">
         <h3>Departments</h3>
-        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({deptName: ""}); }}>
+        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({ deptName: "" }); }}>
           + Add Department
         </button>
       </div>
@@ -106,7 +106,7 @@ export default function Departments() {
               <tr className="adding-row">
                 <td>New</td>
                 <td>
-                  <input autoFocus value={formData.deptName} onChange={(e) => setFormData({deptName: e.target.value})} />
+                  <input autoFocus value={formData.deptName} onChange={(e) => setFormData({ deptName: e.target.value })} />
                 </td>
                 <td className="actions-col">
                   <button className="btn-small save" onClick={() => saveEdit(null)}>Save</button>
@@ -114,12 +114,12 @@ export default function Departments() {
                 </td>
               </tr>
             )}
-            {departments.map((dept) => (
+            {Array.isArray(departments) && departments.map((dept) => (
               <tr key={dept.deptId}>
                 <td>{dept.deptId}</td>
                 <td>
                   {editingId === dept.deptId ? (
-                    <input value={formData.deptName} onChange={(e) => setFormData({deptName: e.target.value})} />
+                    <input value={formData.deptName} onChange={(e) => setFormData({ deptName: e.target.value })} />
                   ) : (
                     dept.deptName
                   )}

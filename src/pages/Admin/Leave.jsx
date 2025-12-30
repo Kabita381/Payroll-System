@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import api from "../../api/axios"; // Use your axios.js instance
 import "./Leave.css";
 
 const LeaveAdmin = () => {
@@ -10,21 +11,25 @@ const LeaveAdmin = () => {
 
   const fetchLeaves = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/employee-leaves');
-      if (!response.ok) throw new Error(`Connection Error: ${response.status}`);
-      const data = await response.json();
-      
-      const formattedData = data.map(leave => ({
+      const res = await api.get("/employee-leaves"); // relative path
+      const data = Array.isArray(res.data) ? res.data : [];
+
+      const formattedData = data.map((leave) => ({
         ...leave,
-        emp_name: leave.employee ? `${leave.employee.firstName} ${leave.employee.lastName}` : "Unknown",
-        leave_type_name: leave.leaveType ? leave.leaveType.typeName : "Home Leave",
-        totalDays: leave.totalDays || 0 
+        emp_name: leave.employee
+          ? `${leave.employee.firstName} ${leave.employee.lastName}`
+          : "Unknown",
+        leave_type_name: leave.leaveType
+          ? leave.leaveType.typeName
+          : "Home Leave",
+        totalDays: leave.totalDays || 0,
       }));
 
       setLeaveRequests(formattedData);
       setLoading(false);
     } catch (err) {
-      setError("Could not connect to database. Ensure Spring Boot is running.");
+      console.error("Fetch error:", err.response?.data || err.message);
+      setError("Could not fetch leave records. Ensure Spring Boot is running.");
       setLoading(false);
     }
   };
@@ -35,38 +40,37 @@ const LeaveAdmin = () => {
 
   const getEmployeeUsedLeaves = (employeeName) => {
     return leaveRequests
-      .filter(leave => leave.emp_name === employeeName && leave.status === "Approved")
+      .filter(
+        (leave) => leave.emp_name === employeeName && leave.status === "Approved"
+      )
       .reduce((sum, leave) => sum + leave.totalDays, 0);
   };
 
   const handleLeaveAction = async (leaveId, action) => {
-    // Retrieve the admin user from local storage session
-    const userSession = JSON.parse(localStorage.getItem("user"));
-    const adminId = userSession?.userId || 1; 
+    const userSession = JSON.parse(localStorage.getItem("user_session")); // token user
+    const adminId = userSession?.user?.userId || 1;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/employee-leaves/${leaveId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            status: action,
-            adminId: adminId // Sends the ID to populate the 'Approved By' column
-        }),
+      await api.patch(`/employee-leaves/${leaveId}/status`, {
+        status: action,
+        adminId: adminId,
       });
 
-      if (!response.ok) throw new Error('Failed to update status');
-
-      // Refresh table to show updated audit data
-      fetchLeaves();
-      
+      fetchLeaves(); // Refresh after action
     } catch (err) {
-      console.error("Action Error:", err);
-      alert("Database connection failed. Please try again.");
+      console.error("Action error:", err.response?.data || err.message);
+      alert("Failed to update leave status.");
     }
   };
 
-  if (loading) return <div className="leave-container">Loading system records...</div>;
-  if (error) return <div className="leave-container" style={{color: 'red'}}>{error}</div>;
+  if (loading)
+    return <div className="leave-container">Loading system records...</div>;
+  if (error)
+    return (
+      <div className="leave-container" style={{ color: "red" }}>
+        {error}
+      </div>
+    );
 
   return (
     <div className="leave-container">
@@ -97,32 +101,58 @@ const LeaveAdmin = () => {
                 <td>{leave.leaveId}</td>
                 <td>{leave.emp_name}</td>
                 <td>{leave.leave_type_name}</td>
-               <td>{leave.startDate} <span className="date-separator">to
-                </span> {leave.endDate}
+                <td>
+                  {leave.startDate} <span className="date-separator">to</span>{" "}
+                  {leave.endDate}
                 </td>
                 <td>{leave.totalDays} Days</td>
                 <td>
-                  <span className={`status-badge ${(leave.status || 'pending').toLowerCase()}`}>
-                    {leave.status || 'Pending'}
+                  <span
+                    className={`status-badge ${
+                      (leave.status || "pending").toLowerCase()
+                    }`}
+                  >
+                    {leave.status || "Pending"}
                   </span>
                 </td>
                 <td>{usedLeaves}</td>
-                <td className="remaining-cell" style={{fontWeight: 'bold'}}>{remaining}</td>
-                
-                {/* Displays the Admin's User ID instead of just a placeholder */}
-                <td>{leave.approvedBy ? `User ID: ${leave.approvedBy.userId}` : "—"}</td>
-                
-                {/* Formats the timestamp for the 'Approved At' column */}
-                <td>{leave.approvedAt ? new Date(leave.approvedAt).toLocaleString() : "—"}</td>
-
+                <td className="remaining-cell" style={{ fontWeight: "bold" }}>
+                  {remaining}
+                </td>
                 <td>
-                  {(!leave.status || leave.status === "Pending") ? (
+                  {leave.approvedBy
+                    ? `User ID: ${leave.approvedBy.userId}`
+                    : "—"}
+                </td>
+                <td>
+                  {leave.approvedAt
+                    ? new Date(leave.approvedAt).toLocaleString()
+                    : "—"}
+                </td>
+                <td>
+                  {!leave.status || leave.status === "Pending" ? (
                     <div className="btn-group">
-                      <button className="btn-approve" onClick={() => handleLeaveAction(leave.leaveId, "Approved")}>Approve</button>
-                      <button className="btn-reject" onClick={() => handleLeaveAction(leave.leaveId, "Rejected")}>Reject</button>
+                      <button
+                        className="btn-approve"
+                        onClick={() =>
+                          handleLeaveAction(leave.leaveId, "Approved")
+                        }
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="btn-reject"
+                        onClick={() =>
+                          handleLeaveAction(leave.leaveId, "Rejected")
+                        }
+                      >
+                        Reject
+                      </button>
                     </div>
                   ) : (
-                    <span className={`text-final ${leave.status.toLowerCase()}`}>{leave.status}</span>
+                    <span className={`text-final ${leave.status.toLowerCase()}`}>
+                      {leave.status}
+                    </span>
                   )}
                 </td>
               </tr>

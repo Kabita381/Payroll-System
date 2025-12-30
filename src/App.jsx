@@ -8,7 +8,7 @@ import AccountantLayout from "./components/AccountantLayout";
 
 /* ================= AUTH & PAGES ================= */
 import Landing from "./pages/Login/Landing.jsx";
-import ForgotPassword from "./pages/Common/ForgotPassword.jsx"; // ADD THIS
+import ForgotPassword from "./pages/Common/ForgotPassword.jsx"; 
 import ResetPassword from "./pages/Common/ResetPassword.jsx"; 
 
 /* ================= DASHBOARDS & SUBPAGES ================= */
@@ -26,6 +26,7 @@ import Attendance from "./pages/Admin/Attendance.jsx";
 import Leave from "./pages/Admin/Leave.jsx";
 import AdminPayroll from "./pages/Admin/Payroll.jsx";
 import Report from "./pages/Admin/Report.jsx";
+import SystemConfig from "./pages/Admin/SystemConfig/System-Config.jsx"; // Ensure this import exists
 
 // EMPLOYEE
 import EmployeeDashboard from "./pages/Employee/EmployeeDashboard.jsx";
@@ -61,10 +62,10 @@ function App() {
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Landing setUser={setUser} />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} /> {/* ADDED THIS ROUTE */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* PROTECTED ACCOUNTANT ROUTES (ROLE ID 3) */}
+        {/* PROTECTED ACCOUNTANT ROUTES */}
         <Route path="/accountant" element={<ProtectedRoute allowedRole="ROLE_ACCOUNTANT" />}>
           <Route element={<AccountantLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -76,7 +77,7 @@ function App() {
           </Route>
         </Route>
 
-        {/* PROTECTED ADMIN ROUTES (ROLE ID 1) */}
+        {/* PROTECTED ADMIN ROUTES */}
         <Route path="/admin" element={<ProtectedRoute allowedRole="ROLE_ADMIN" />}>
           <Route element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -86,10 +87,11 @@ function App() {
             <Route path="leave" element={<Leave />} />
             <Route path="payroll" element={<AdminPayroll />} />
             <Route path="report" element={<Report />} />
+            <Route path="system-config" element={<SystemConfig />} />
           </Route>
         </Route>
 
-        {/* PROTECTED EMPLOYEE ROUTES (ROLE ID 4) */}
+        {/* PROTECTED EMPLOYEE ROUTES */}
         <Route path="/employee" element={<ProtectedRoute allowedRole="ROLE_EMPLOYEE" />}>
           <Route element={<EmployeeLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
