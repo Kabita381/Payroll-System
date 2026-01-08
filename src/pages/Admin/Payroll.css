@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+/* Optimized Payroll Styles */
+>>>>>>> fc55ff3ba7b6ff9a8ac64d4f52d01c775e678fcc
 .payroll-container {
     padding: 30px;
     background-color: #f8f9fe;
@@ -11,6 +15,7 @@
     margin-bottom: 30px;
 }
 
+<<<<<<< HEAD
 .header-title h2 {
     margin: 0;
     color: #32325d;
@@ -43,6 +48,22 @@
     border-radius: 8px;
     box-shadow: 0 0 2rem 0 rgba(136, 152, 170, 0.15);
     overflow: hidden;
+=======
+.search-bar {
+    padding: 12px 20px;
+    width: 350px;
+    border: 1px solid #d1d9e0;
+    border-radius: 10px;
+    outline: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.payroll-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    overflow-x: auto;
+>>>>>>> fc55ff3ba7b6ff9a8ac64d4f52d01c775e678fcc
 }
 
 .main-payroll-table {
@@ -50,6 +71,7 @@
     border-collapse: collapse;
 }
 
+<<<<<<< HEAD
 .main-payroll-table th {
     background: #f6f9fc;
     padding: 15px 25px;
@@ -86,14 +108,61 @@
 .action-btn {
     padding: 8px 15px;
     margin-right: 5px;
+=======
+.payroll-table th {
+    background: #fdfdfd;
+    padding: 18px 20px;
+    text-align: left;
+    color: #8898aa;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.payroll-table td {
+    padding: 18px 20px;
+    border-bottom: 1px solid #edf2f7;
+    font-size: 14px;
+    color: #525f7f;
+}
+
+.emp-name { font-weight: 700; color: #32325d; display: block; margin-bottom: 2px; }
+.emp-id { font-size: 12px; color: #8898aa; }
+
+.amount-net {
+    font-size: 16px;
+    font-weight: 800;
+    color: #5e72e4;
+    background: #f0f3ff;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+.actions-cell { display: flex; gap: 8px; }
+
+.btn-icon {
+    padding: 7px 12px;
+    border-radius: 6px;
+>>>>>>> fc55ff3ba7b6ff9a8ac64d4f52d01c775e678fcc
     border: none;
     border-radius: 4px;
     cursor: pointer;
+<<<<<<< HEAD
+=======
+    font-size: 12px;
+>>>>>>> fc55ff3ba7b6ff9a8ac64d4f52d01c775e678fcc
     font-weight: 600;
     transition: 0.2s;
 }
 
+<<<<<<< HEAD
 .action-btn.pdf { background: #11cdef; color: #fff; }
 .action-btn.email { background: #5e72e4; color: #fff; }
 
 .action-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+=======
+.btn-pdf { background: #2dce89; color: white; }
+.btn-email { background: #5e72e4; color: white; }
+.btn-icon:hover { opacity: 0.9; transform: translateY(-1px); }
+>>>>>>> fc55ff3ba7b6ff9a8ac64d4f52d01c775e678fcc
