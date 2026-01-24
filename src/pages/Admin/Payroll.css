@@ -174,3 +174,35 @@
     font-weight: bold;
     color: #5e72e4;
 }
+/* Status Badge Colors */
+.status-badge.status-paid {
+    background: #e6fffa;
+    color: #2c7a7b;
+    border: 1px solid #81e6d9;
+}
+
+.status-badge.status-void {
+    background: #fff5f5;
+    color: #c53030;
+    border: 1px solid #feb2b2;
+}
+
+/* Voided Row Styling */
+.row-voided {
+    opacity: 0.6;
+    background-color: #f7fafc !important;
+}
+
+.row-voided .amount-net {
+    text-decoration: line-through;
+    color: #a0aec0;
+}
+
+/* Modal Year Select */
+.year-select {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e0;
+    font-weight: 600;
+    margin-right: 15px;
+}
