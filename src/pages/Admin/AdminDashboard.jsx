@@ -6,15 +6,19 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({
     totalWorkforce: 0,
     dailyAttendance: "0%",
-    leaveRequests: "00"
+    leaveRequests: "00",
+    activeNow: 0
   });
   const [recentAttendance, setRecentAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
   const formatTime = (timeString) => {
     if (!timeString) return "---";
     try {
-      // Handles both ISO strings and HH:mm:ss formats
       const date = timeString.includes('T') ? new Date(timeString) : new Date(`1970-01-01T${timeString}`);
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
     } catch (e) {
@@ -29,19 +33,27 @@ const AdminDashboard = () => {
         const token = session.jwt || session.token;
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        // Fetch Stats
         const statsRes = await axios.get('http://localhost:8080/api/dashboard/admin/stats', { headers });
+        const attendanceRes = await axios.get('http://localhost:8080/api/dashboard/recent-attendance', { headers });
+
         if (statsRes.data) {
           setStats({
             totalWorkforce: statsRes.data.totalWorkforce || 0,
             dailyAttendance: statsRes.data.dailyAttendance ? `${statsRes.data.dailyAttendance}` : "0",
-            leaveRequests: (statsRes.data.leaveRequests || 0).toString().padStart(2, '0')
+            leaveRequests: (statsRes.data.leaveRequests || 0).toString().padStart(2, '0'),
+            activeNow: Array.isArray(attendanceRes.data) ? attendanceRes.data.length : 0
           });
         }
 
-        // Fetch Attendance
-        const attendanceRes = await axios.get('http://localhost:8080/api/dashboard/recent-attendance', { headers });
-        setRecentAttendance(Array.isArray(attendanceRes.data) ? attendanceRes.data : []); 
+        if (Array.isArray(attendanceRes.data)) {
+          // SORTING: Latest records first (Descending order by time)
+          const sortedData = attendanceRes.data.sort((a, b) => {
+             const timeA = new Date(a.checkInTime).getTime() || 0;
+             const timeB = new Date(b.checkInTime).getTime() || 0;
+             return timeB - timeA;
+          });
+          setRecentAttendance(sortedData);
+        }
 
       } catch (error) {
         console.error("Dashboard failed to fetch data:", error);
@@ -53,10 +65,17 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
+  // Pagination Logic
+  const indexOfLastRecord = currentPage * recordsPerPage;
+  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+  const currentRecords = recentAttendance.slice(indexOfFirstRecord, indexOfLastRecord);
+  const totalPages = Math.ceil(recentAttendance.length / recordsPerPage);
+
   const adminStats = [
-    { title: "TOTAL WORKFORCE", value: stats.totalWorkforce, icon: "👥" },
-    { title: "DAILY ATTENDANCE", value: stats.dailyAttendance, icon: "📅" },
-    { title: "LEAVE REQUESTS", value: stats.leaveRequests, icon: "📝" }
+    { title: "TOTAL WORKFORCE", value: stats.totalWorkforce, icon: "👥", color: "#4f46e5" },
+    { title: "DAILY ATTENDANCE", value: stats.dailyAttendance, icon: "📅", color: "#10b981" },
+    { title: "LEAVE REQUESTS", value: stats.leaveRequests, icon: "📝", color: "#f59e0b" },
+    { title: "ACTIVE (24H)", value: stats.activeNow, icon: "⚡", color: "#ef4444" }
   ];
 
   if (loading) return <div className="loader">Loading Dashboard Data...</div>;
@@ -71,7 +90,7 @@ const AdminDashboard = () => {
 
         <div className="top-stats-grid">
           {adminStats.map((stat, index) => (
-            <div key={index} className="horizontal-stat-card">
+            <div key={index} className="horizontal-stat-card" style={{ borderLeft: `5px solid ${stat.color}` }}>
               <div className="stat-icon-container">
                 <span className="icon-main">{stat.icon}</span>
               </div>
@@ -84,7 +103,7 @@ const AdminDashboard = () => {
         </div>
 
         <div className="dashboard-recent-section">
-          <h3 className="section-divider-title">Recent Attendance (Today)</h3>
+          <h3 className="section-divider-title">Attendance History</h3>
           <div className="recent-table-container">
             <table className="recent-attendance-table">
               <thead>
@@ -97,8 +116,8 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentAttendance.length > 0 ? (
-                  recentAttendance
+                {currentRecords.length > 0 ? (
+                  currentRecords
                     .filter(record => record.employee && record.employee.isActive !== false)
                     .map((record, index) => (
                       <tr key={index}>
@@ -116,23 +135,47 @@ const AdminDashboard = () => {
                                   href={`https://www.google.com/maps?q=${record.inGpsLat},${record.inGpsLong}`} 
                                   target="_blank" 
                                   rel="noreferrer"
-                                  style={{ color: '#10b981', fontWeight: 'bold', textDecoration: 'none' }}
+                                  className="map-link-btn"
                               >
                                   📍 View Map
                               </a>
                           ) : (
-                              <span style={{ color: '#999' }}>{record.workLocation || "No Location"}</span>
+                              <span className="no-location-text">{record.workLocation || "No Location"}</span>
                           )}
                         </td>
                       </tr>
                     ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="no-data">No attendance recorded today</td>
+                    <td colSpan="5" className="no-data">No attendance recorded</td>
                   </tr>
                 )}
               </tbody>
             </table>
+
+            {/* Professional Bottom-Right Pagination */}
+            <div className="pagination-footer">
+               <div className="pagination-info">
+                  Showing {indexOfFirstRecord + 1} to {Math.min(indexOfLastRecord, recentAttendance.length)} of {recentAttendance.length} records
+               </div>
+               <div className="pagination-controls">
+                  <button 
+                    className="pager-btn"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </button>
+                  <span className="page-number">Page {currentPage} of {totalPages || 1}</span>
+                  <button 
+                    className="pager-btn"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                  >
+                    Next
+                  </button>
+               </div>
+            </div>
           </div>
         </div>
       </div>

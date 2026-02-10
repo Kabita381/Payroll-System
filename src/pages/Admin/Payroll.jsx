@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
+import { 
+  getEmployeeHistory, 
+  voidPayrollRecord, 
+  emailPayslip 
+} from "../../api/payrollApi";
 import "./Payroll.css";
 
-/**
- * HISTORY MODAL COMPONENT
- * Handles viewing past payrolls by year
- */
+// Separate History Modal Component
 const HistoryModal = ({ isOpen, onClose, history, employeeName }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
-  // Generate range from 2020 to 2026
   const availableYears = useMemo(() => {
     const years = [];
-    for (let y = new Date().getFullYear(); y >= 2020; y--) {
-      years.push(y.toString());
-    }
+    for (let y = new Date().getFullYear(); y >= 2020; y--) years.push(y.toString());
     return years;
   }, []);
 
-  if (!isOpen) return null;
+  if (!isOpen) return null; 
 
   const yearlyHistory = history.filter(h => 
     new Date(h.payDate).getFullYear().toString() === selectedYear
@@ -26,58 +26,44 @@ const HistoryModal = ({ isOpen, onClose, history, employeeName }) => {
 
   return (
     <div className="modal-overlay">
-      <div className="history-modal-content">
+      <div className="history-modal-content large">
         <div className="modal-header">
           <div>
-            <h2 className="header-title">Salary History: {employeeName}</h2>
-            <p className="header-subtitle">Yearly disbursement breakdown</p>
+            <h2 className="header-title">Payroll Audit: {employeeName}</h2>
+            <p className="header-subtitle">Statutory deductions (SSF/CIT/Tax)</p>
           </div>
           <div className="modal-controls">
-            <select 
-              className="year-select" 
-              value={selectedYear} 
-              onChange={(e) => setSelectedYear(e.target.value)}
-            >
-              {availableYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
+            <select className="year-select" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
+              {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
             <button className="close-btn" onClick={onClose}>&times;</button>
           </div>
         </div>
         <div className="modal-body">
-          <table className="history-table">
+          <table className="history-table" style={{width: '100%', borderCollapse: 'collapse'}}>
             <thead>
-              <tr>
-                <th>Date</th>
-                <th>Ref #</th>
-                <th>Gross</th>
+              <tr style={{background: '#f8fafc'}}>
+                <th>Pay Date</th>
+                <th>Gross Salary</th>
+                <th>SSF (11%)</th>
+                <th>CIT</th>
+                <th>Tax</th>
                 <th>Net Paid</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {yearlyHistory.length > 0 ? (
-                yearlyHistory.map((h) => (
-                  <tr key={h.payrollId} className={h.status === "VOIDED" ? "row-voided" : ""}>
-                    <td>{h.payDate}</td>
-                    <td>{h.payslipRef || `PAY-${h.payrollId}`}</td>
-                    <td>Rs. {h.grossSalary.toLocaleString()}</td>
-                    <td>Rs. {h.netSalary.toLocaleString()}</td>
-                    <td>
-                      <span className={`status-badge ${h.status === "VOIDED" ? "status-void" : "status-paid"}`}>
-                        {h.status || 'PAID'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
-                    No records found for the year {selectedYear}.
-                  </td>
+              {yearlyHistory.length > 0 ? yearlyHistory.map(h => (
+                <tr key={h.payrollId} className={h.status === "VOIDED" ? "row-voided" : ""}>
+                  <td>{new Date(h.payDate).toLocaleDateString()}</td>
+                  <td>Rs. {h.grossSalary.toLocaleString()}</td>
+                  <td>- {h.ssfContribution?.toLocaleString()}</td>
+                  <td>- {h.citContribution?.toLocaleString()}</td>
+                  <td>Rs. {h.totalTax.toLocaleString()}</td>
+                  <td className="bold">Rs. {h.netSalary.toLocaleString()}</td>
+                  <td><span className={`status-badge status-${h.status.toLowerCase().replace('_', '-')}`}>{h.status}</span></td>
                 </tr>
-              )}
+              )) : <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>No records found for this year.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -86,164 +72,254 @@ const HistoryModal = ({ isOpen, onClose, history, employeeName }) => {
   );
 };
 
-/**
- * MAIN PAYROLL MANAGEMENT COMPONENT
- */
 const PayrollManagement = () => {
+  const navigate = useNavigate();
   const [payrolls, setPayrolls] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]); 
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [historyData, setHistoryData] = useState([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedEmpName, setSelectedEmpName] = useState("");
+  const [processingInputs, setProcessingInputs] = useState({});
 
-  useEffect(() => { loadPayrolls(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const loadPayrolls = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/payrolls");
-      setPayrolls(res.data);
-    } catch (err) {
-      console.error("Failed to fetch", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ACTION: Email
-  const handleEmailPayslip = async (p) => {
-    try {
-      await api.post(`/payrolls/${p.payrollId}/send-email`);
-      alert(`Payslip sent to ${p.employee.firstName}'s email!`);
-    } catch (err) {
-      alert("Email service is currently offline. Check backend logs.");
-    }
-  };
-
-  // ACTION: Void
-  const handleVoidPayroll = async (p) => {
-    if (window.confirm(`Are you sure you want to VOID this record for ${p.employee.firstName}?`)) {
-      try {
-        await api.put(`/payrolls/${p.payrollId}/void`);
-        alert("Payroll record has been voided.");
-        loadPayrolls(); // Refresh dashboard
-      } catch (err) {
-        alert("Failed to void record. Ensure the backend endpoint exists.");
-      }
-    }
-  };
-
-  // ACTION: View History
-  const handleViewHistory = async (p) => {
-    try {
-      const res = await api.get(`/payrolls/employee/${p.employee.empId}/history`);
-      setHistoryData(res.data); 
-      setSelectedEmpName(`${p.employee.firstName} ${p.employee.lastName}`);
-      setIsHistoryOpen(true);
+      const [pRes, eRes, mRes] = await Promise.all([
+        api.get("/payrolls"), 
+        api.get("/employees"),
+        api.get("/payment-methods")
+      ]);
+      setPayrolls(pRes.data);
+      setEmployees(eRes.data);
+      setPaymentMethods(mRes.data);
     } catch (err) { 
-      setHistoryData([p]); // Fallback to current if history fetch fails
-      setSelectedEmpName(`${p.employee.firstName} ${p.employee.lastName}`);
-      setIsHistoryOpen(true);
+      console.error("Fetch Error:", err); 
+    } finally { 
+      setLoading(false); 
     }
   };
 
-  // Filter to show only unique latest records per employee
-  const uniqueCurrentPayrolls = useMemo(() => {
-    const sorted = [...payrolls].sort((a, b) => b.payrollId - a.payrollId);
-    const latestMap = new Map();
-    sorted.forEach(p => {
-      if (!latestMap.has(p.employee.empId)) latestMap.set(p.employee.empId, p);
+  const handleInputChange = (empId, field, val) => {
+    setProcessingInputs(prev => ({
+      ...prev,
+      [empId]: {
+        ...(prev[empId] || { festivalBonus: 0, otherBonus: 0, citContribution: 0, paymentMethodId: "" }),
+        [field]: val
+      }
+    }));
+  };
+
+  const handleActionRun = async (emp) => {
+    const empId = emp.empId;
+    const inputs = processingInputs[empId] || {};
+    
+    if (!inputs.paymentMethodId) {
+        alert(`Please select a Payment Method for ${emp.firstName}`);
+        return;
+    }
+
+    try {
+        const payload = {
+            empId: parseInt(empId), 
+            festivalBonus: parseFloat(inputs.festivalBonus || 0),
+            bonuses: parseFloat(inputs.otherBonus || 0),
+            citContribution: parseFloat(inputs.citContribution || 0)
+        };
+
+        const res = await api.post("/payrolls/preview", payload);
+        
+        navigate("/admin/payroll/preview", { 
+            state: { 
+                previewData: res.data,
+                selectedPaymentMethodId: inputs.paymentMethodId 
+            } 
+        });
+    } catch (err) {
+        console.error("Preview Error:", err);
+        const errorMsg = err.response?.data?.message || "Preview failed. Please check backend logs.";
+        alert("Error: " + errorMsg);
+    }
+  };
+
+  const handleEmail = async (id) => {
+    try { 
+        await emailPayslip(id); 
+        alert("Email sent successfully."); 
+    } catch (err) { 
+        alert("Email failed. Check mail server configuration."); 
+    }
+  };
+
+  const handleVoid = async (p) => {
+    if (window.confirm(`Are you sure you want to VOID payroll for ${p.employee.firstName}? This cannot be undone.`)) {
+      try { 
+        await voidPayrollRecord(p.payrollId); 
+        fetchData(); 
+      } catch (err) { alert("Void operation failed."); }
+    }
+  };
+
+  const handleViewHistory = async (emp) => {
+    try {
+      const res = await getEmployeeHistory(emp.empId);
+      setHistoryData(res.data);
+      setSelectedEmpName(`${emp.firstName} ${emp.lastName}`);
+      setIsHistoryOpen(true);
+    } catch (err) { console.error(err); }
+  };
+
+  const latestPayrollsMap = useMemo(() => {
+    const map = new Map();
+    [...payrolls].sort((a,b) => b.payrollId - a.payrollId).forEach(p => {
+      if(!map.has(p.employee.empId)) map.set(p.employee.empId, p);
     });
-    return Array.from(latestMap.values());
+    return map;
   }, [payrolls]);
 
-  const filteredPayrolls = uniqueCurrentPayrolls.filter(p => 
-    `${p.employee.firstName} ${p.employee.lastName}`.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const totalNetPayable = uniqueCurrentPayrolls
-    .filter(p => p.status !== "VOIDED")
-    .reduce((acc, curr) => acc + curr.netSalary, 0);
-
-  if (loading) return <div className="loading-spinner">Initializing Payroll Environment...</div>;
+  if (loading) return <div className="loading-spinner">Synchronizing Payroll Data...</div>;
 
   return (
     <div className="payroll-container">
       <div className="payroll-header-section">
         <div>
           <h1 className="header-title">Payroll Command Center</h1>
-          <p className="header-subtitle">Professional Disbursement & Audit System</p>
+          <p className="header-subtitle">Nepal Automated Tax System</p>
         </div>
-        <div className="search-wrapper">
-          <input
-            type="text" className="search-bar" placeholder="Search Name or Ref #..." 
-            value={search} onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-label">TOTAL NET (ACTIVE)</span>
-          <span className="stat-value">Rs. {totalNetPayable.toLocaleString()}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">PROCESSED MONTHLY</span>
-          <span className="stat-value">{uniqueCurrentPayrolls.length} Employees</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">SYSTEM MODE</span>
-          <div style={{marginTop: '8px'}}><span className="status-pill status-paid">LIVE - AUDIT ENABLED</span></div>
-        </div>
+        <input className="search-bar" placeholder="Search Employee..." onChange={(e)=>setSearch(e.target.value)} />
       </div>
 
       <div className="payroll-card">
         <table className="payroll-table">
           <thead>
             <tr>
-              <th>EMPLOYEE / REF</th>
-              <th>STATUS</th>
-              <th>NET PAYABLE</th>
-              <th>BONUS</th>
-              <th>ACTIONS</th>
+              <th>Employee</th>
+              <th>Basic Salary</th>
+              <th>Festival Bonus</th>
+              <th>Other Bonus</th>
+              <th>CIT</th>
+              <th>Payment Method</th>
+              <th>Status</th>
+              <th style={{textAlign: 'center'}}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredPayrolls.map(p => (
-              <tr key={p.payrollId} className={`table-row-hover ${p.status === "VOIDED" ? 'row-voided' : ''}`}>
-                <td>
-                  <span className="emp-name">{p.employee.firstName} {p.employee.lastName}</span>
-                  <span className="emp-id">ID: {p.employee.empId}</span>
-                </td>
-                <td>
-                  <span className={`status-badge ${p.status === "VOIDED" ? 'status-void' : 'status-paid'}`}>
-                    {p.status || 'PAID'}
-                  </span>
-                </td>
-                <td><span className="amount-net">Rs. {p.netSalary.toLocaleString()}</span></td>
-                <td>
-                  <div className="bonus-action-cell">
-                    <input type="number" className="bonus-input-small" placeholder="Bonus" />
-                    <button className="btn-bonus-add">ADD</button>
-                  </div>
-                </td>
-                <td className="actions-cell">
-                  <button className="btn-icon btn-history" onClick={() => handleViewHistory(p)}>History</button>
-                  <button className="btn-icon btn-email" onClick={() => handleEmailPayslip(p)}>Email</button>
-                  <button className="btn-icon btn-void" onClick={() => handleVoidPayroll(p)}>Void</button>
-                </td>
-              </tr>
-            ))}
+            {employees
+              .filter(e => `${e.firstName} ${e.lastName}`.toLowerCase().includes(search.toLowerCase()))
+              .map(emp => {
+                const latest = latestPayrollsMap.get(emp.empId);
+                
+                // CRITICAL CHANGE: Only lock if status is PAID.
+                // If status is PENDING_PAYMENT, we allow editing and re-running.
+                const isFullyPaid = latest && latest.status === "PAID";
+                const isPending = latest && latest.status === "PENDING_PAYMENT";
+                
+                const currentInputs = processingInputs[emp.empId] || { festivalBonus: 0, otherBonus: 0, citContribution: 0, paymentMethodId: "" };
+
+                return (
+                  <tr key={emp.empId} className="table-row-hover">
+                    <td>
+                      <div className="emp-info">
+                        <span className="emp-name">{emp.firstName} {emp.lastName}</span>
+                        <span className="emp-id">Status: {emp.maritalStatus}</span>
+                      </div>
+                    </td>
+                    <td className="bold">Rs. {emp.basicSalary?.toLocaleString() || 0}</td>
+                    
+                    <td>
+                      {isFullyPaid ? (
+                        <span className="locked-value">Rs. {latest.festivalBonus?.toLocaleString() || 0}</span>
+                      ) : (
+                        <input type="number" className="bonus-input-small" style={{borderColor: '#27ae60'}}
+                          value={currentInputs.festivalBonus} 
+                          onChange={(e)=>handleInputChange(emp.empId, 'festivalBonus', e.target.value)} 
+                        />
+                      )}
+                    </td>
+
+                    <td>
+                      {isFullyPaid ? (
+                        <span className="locked-value">Rs. {latest.otherBonuses?.toLocaleString() || 0}</span>
+                      ) : (
+                        <input type="number" className="bonus-input-small" 
+                          value={currentInputs.otherBonus} 
+                          onChange={(e)=>handleInputChange(emp.empId, 'otherBonus', e.target.value)} 
+                        />
+                      )}
+                    </td>
+
+                    <td>
+                      {isFullyPaid ? (
+                        <span className="locked-value">Rs. {latest.citContribution?.toLocaleString() || 0}</span>
+                      ) : (
+                        <input type="number" className="bonus-input-small" 
+                          value={currentInputs.citContribution} 
+                          onChange={(e)=>handleInputChange(emp.empId, 'citContribution', e.target.value)} 
+                        />
+                      )}
+                    </td>
+
+                    <td>
+                      {isFullyPaid ? (
+                        <span className="locked-value">{latest.paymentMethod?.methodName}</span>
+                      ) : (
+                        <select 
+                          className="method-select-small"
+                          style={{ padding: '6px', borderRadius: '4px', border: '1px solid #27ae60', width: '120px' }}
+                          value={currentInputs.paymentMethodId}
+                          onChange={(e) => handleInputChange(emp.empId, 'paymentMethodId', e.target.value)}
+                        >
+                          <option value="">-- Select --</option>
+                          {paymentMethods.map(m => (
+                            <option key={m.paymentMethodId} value={m.paymentMethodId}>{m.methodName}</option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+
+                    <td>
+                        <span className={`status-badge status-${(latest?.status || 'READY').toLowerCase().replace('_', '-')}`}>
+                            {latest?.status || "READY"}
+                        </span>
+                    </td>
+                    
+                    <td className="actions-cell" style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                      {/* Show 'Run' or 'Resume' if not fully paid */}
+                      {!isFullyPaid && (
+                        <button 
+                            className="btn-icon btn-run" 
+                            style={{background: isPending ? '#f39c12' : '#2ecc71', color: 'white'}} 
+                            onClick={() => handleActionRun(emp)}
+                        >
+                            {isPending ? "Resume" : "Run"}
+                        </button>
+                      )}
+
+                      <button className="btn-icon btn-history" style={{background:'#64748b', color:'white'}} onClick={() => handleViewHistory(emp)}>History</button>
+                      
+                      {latest && (
+                        <>
+                          <button className="btn-icon btn-email" onClick={() => handleEmail(latest.payrollId)} disabled={isPending}>Email</button>
+                          <button className="btn-icon btn-void" onClick={() => handleVoid(latest)}>Void</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>
 
       <HistoryModal 
         isOpen={isHistoryOpen} 
-        onClose={() => setIsHistoryOpen(false)} 
+        onClose={()=>setIsHistoryOpen(false)} 
         history={historyData} 
-        employeeName={selectedEmpName}
+        employeeName={selectedEmpName} 
       />
     </div>
   );

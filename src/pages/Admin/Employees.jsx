@@ -21,9 +21,17 @@ export default function Employees() {
   const fetchEmployees = async () => {
     try {
       const res = await getEmployees();
-      setEmployees(res.data || []);
-    } catch (err) { console.error(err); } 
-    finally { setLoading(false); }
+      console.log("API Response:", res.data); // DEBUG: Check this in your browser console
+
+      // Some APIs return the list in res.data, others in res.data.content (if paginated)
+      const data = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      setEmployees(data);
+    } catch (err) { 
+      console.error("Fetch Error:", err); 
+      setEmployees([]); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const confirmDelete = async () => {
@@ -35,7 +43,9 @@ export default function Employees() {
   };
 
   const filtered = employees.filter(emp => {
-    const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
+    const firstName = emp.firstName || "";
+    const lastName = emp.lastName || "";
+    const fullName = `${firstName} ${lastName}`.toLowerCase();
     const idStr = (emp.empId || emp.id || "").toString();
     return fullName.includes(searchTerm.toLowerCase()) || idStr.includes(searchTerm.toLowerCase());
   }).sort((a, b) => (b.empId || b.id) - (a.empId || a.id));
@@ -43,7 +53,7 @@ export default function Employees() {
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const currentData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  if (loading) return <div className="loader">Loading Dashboard...</div>;
+  if (loading) return <div className="loader">Loading Employee Data...</div>;
 
   return (
     <div className="emp-page-container">
@@ -70,42 +80,55 @@ export default function Employees() {
         </div>
 
         <div className="emp-list-content">
-          {currentData.map(emp => {
-            const id = emp.empId || emp.id;
-            return (
-              <div key={id} className="emp-row-group">
-                <div className="emp-row-main">
-                  <span className="emp-bold">#{id} {emp.firstName} {emp.lastName}</span>
-                  <span className="emp-muted">{emp.email}</span>
-                  <span>{emp.department?.deptName || "N/A"}</span>
-                  <span>
-                    <span className={`emp-status-tag ${emp.isActive ? "active" : "inactive"}`}>
-                      {emp.isActive ? "Active" : "Leave"}
+          {currentData.length === 0 ? (
+            <div className="emp-no-data" style={{textAlign: 'center', padding: '40px', color: '#888'}}>
+              <p>No employees found.</p>
+              <small>Check backend logs if you expected data here.</small>
+            </div>
+          ) : (
+            currentData.map(emp => {
+              const id = emp.empId || emp.id;
+              return (
+                <div key={id} className="emp-row-group">
+                  <div className="emp-row-main">
+                    <span className="emp-bold">#{id} {emp.firstName} {emp.lastName}</span>
+                    <span className="emp-muted">{emp.email}</span>
+                    <span>{emp.department?.deptName || "N/A"}</span>
+                    <span>
+                      <span className={`emp-status-tag ${emp.isActive ? "active" : "inactive"}`}>
+                        {emp.isActive ? "Active" : "On Leave"}
+                      </span>
                     </span>
-                  </span>
-                  <div style={{ textAlign: "right" }}>
-                    <button className="emp-view-trigger" onClick={() => setExpandedId(expandedId === id ? null : id)}>
-                      {expandedId === id ? "Close" : "Details"}
-                    </button>
-                  </div>
-                </div>
-
-                {expandedId === id && (
-                  <div className="emp-details-tray">
-                    <div className="emp-details-grid">
-                      <span><strong>Contact:</strong> {emp.contact}</span>
-                      <span><strong>Education:</strong> {emp.education}</span>
-                      <span><strong>Role:</strong> {emp.position?.designationTitle}</span>
-                      <div className="emp-tray-actions">
-                        <button className="emp-action-edit" onClick={() => navigate(`/admin/employees/edit/${id}`)}>✎ Edit</button>
-                        <button className="emp-action-delete" onClick={() => { setTargetId(id); setShowModal(true); }}>🗑 Delete</button>
-                      </div>
+                    <div style={{ textAlign: "right" }}>
+                      <button className="emp-view-trigger" onClick={() => setExpandedId(expandedId === id ? null : id)}>
+                        {expandedId === id ? "Hide" : "Details"}
+                      </button>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+
+                  {expandedId === id && (
+                    <div className="emp-details-tray">
+                      <div className="emp-details-grid">
+                        <span><strong>Contact:</strong> {emp.contact || "N/A"}</span>
+                        <span><strong>Education:</strong> {emp.education || "N/A"}</span>
+                        <span><strong>Position:</strong> {emp.position?.designationTitle || "N/A"}</span>
+                        <span><strong>Basic Salary:</strong> {emp.basicSalary?.toLocaleString() || "0"}</span>
+                        
+                        {/* Bank Details section */}
+                        <span><strong>Bank:</strong> {emp.bankAccount?.bank?.bankName || "Not Linked"}</span>
+                        <span><strong>A/C No:</strong> {emp.bankAccount?.accountNumber || "N/A"}</span>
+
+                        <div className="emp-tray-actions">
+                          <button className="emp-action-edit" onClick={() => navigate(`/admin/employees/edit/${id}`)}>✎ Edit</button>
+                          <button className="emp-action-delete" onClick={() => { setTargetId(id); setShowModal(true); }}>🗑 Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
 
         <footer className="emp-pagination">

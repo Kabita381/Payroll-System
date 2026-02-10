@@ -18,7 +18,8 @@ function MessageModal({ show, type, message, onClose }) {
 export default function Designations() {
   const [designations, setDesignations] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ designationTitle: "" });
+  // Updated formData to include baseSalary
+  const [formData, setFormData] = useState({ designationTitle: "", baseSalary: 0 });
   const [addingNew, setAddingNew] = useState(false);
 
   const [showConfirm, setShowConfirm] = useState(false);
@@ -42,13 +43,17 @@ export default function Designations() {
   const startEdit = (desg) => {
     setEditingId(desg.designationId);
     setAddingNew(false);
-    setFormData({ designationTitle: desg.designationTitle });
+    // Map existing values to form
+    setFormData({ 
+      designationTitle: desg.designationTitle, 
+      baseSalary: desg.baseSalary || 0 
+    });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setAddingNew(false);
-    setFormData({ designationTitle: "" });
+    setFormData({ designationTitle: "", baseSalary: 0 });
   };
 
   const saveEdit = async (id) => {
@@ -57,7 +62,12 @@ export default function Designations() {
       return;
     }
     try {
-      const payload = { designationTitle: formData.designationTitle };
+      // Payload now includes baseSalary
+      const payload = { 
+        designationTitle: formData.designationTitle,
+        baseSalary: parseFloat(formData.baseSalary) 
+      };
+
       if (addingNew) {
         await api.post("/designations", payload);
         showMessage("success", "Designation Created!");
@@ -90,7 +100,7 @@ export default function Designations() {
 
       <div className="section-header">
         <h3>Designations</h3>
-        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({ designationTitle: "" }); }}>
+        <button className="add-btn" onClick={() => { setAddingNew(true); setEditingId(null); setFormData({ designationTitle: "", baseSalary: 0 }); }}>
           + Add New Designation
         </button>
       </div>
@@ -99,8 +109,9 @@ export default function Designations() {
         <table className="org-table">
           <thead>
             <tr>
-              <th style={{ width: '15%' }}>ID</th>
+              <th style={{ width: '10%' }}>ID</th>
               <th>Designation Title</th>
+              <th style={{ width: '20%' }}>Base Salary</th>
               <th style={{ textAlign: 'center', width: '25%' }}>Actions</th>
             </tr>
           </thead>
@@ -112,8 +123,16 @@ export default function Designations() {
                   <input
                     autoFocus
                     value={formData.designationTitle}
-                    onChange={(e) => setFormData({ designationTitle: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, designationTitle: e.target.value })}
                     placeholder="Enter title..."
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={formData.baseSalary}
+                    onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
+                    placeholder="0.00"
                   />
                 </td>
                 <td style={{ textAlign: 'center' }}>
@@ -129,10 +148,22 @@ export default function Designations() {
                   {editingId === desg.designationId ? (
                     <input
                       value={formData.designationTitle}
-                      onChange={(e) => setFormData({ designationTitle: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, designationTitle: e.target.value })}
                     />
                   ) : (
                     desg.designationTitle
+                  )}
+                </td>
+                <td>
+                  {editingId === desg.designationId ? (
+                    <input
+                      type="number"
+                      value={formData.baseSalary}
+                      onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
+                    />
+                  ) : (
+                    // Formatting to 2 decimal places for UI consistency
+                    desg.baseSalary?.toLocaleString(undefined, { minimumFractionDigits: 2 })
                   )}
                 </td>
                 <td style={{ textAlign: 'center' }}>

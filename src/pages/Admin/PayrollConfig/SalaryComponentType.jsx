@@ -1,124 +1,51 @@
 import React, { useEffect, useState } from "react";
-import api from "../../../api/axios"; // centralized axios instance
+import api from "../../../api/axios"; 
 import ConfirmModal from "../../../components/ConfirmModal";
 import "./PayrollConfig.css";
 
-export default function SalaryComponents() {
+export default function EmployeeSalaryComponents() {
   const [components, setComponents] = useState([]);
-  const [types, setTypes] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [addingNew, setAddingNew] = useState(false);
-  const [formData, setFormData] = useState({
-    componentName: "",
-    componentTypeId: "",
-    calculationMethod: "fixed",
-    defaultValue: 0,
-    description: "",
-    required: false
-  });
-
+  const [loading, setLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
-  const COMPONENT_API = "/salary-components";
-  const TYPE_API = "/salary-component-types";
+  // Updated API path based on your Backend Entity
+  const ESC_API = "/employee-salary-components";
 
   useEffect(() => {
-    fetchComponents();
-    fetchTypes();
+    fetchEmployeeComponents();
   }, []);
 
-  const fetchComponents = async () => {
+  const fetchEmployeeComponents = async () => {
     try {
-      const res = await api.get(COMPONENT_API);
+      const res = await api.get(ESC_API);
       setComponents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Error fetching salary components", err);
-    }
-  };
-
-  const fetchTypes = async () => {
-    try {
-      const res = await api.get(TYPE_API);
-      setTypes(res.data);
-    } catch (err) {
-      console.error("Error fetching component types", err);
-    }
-  };
-
-  const startEdit = (item) => {
-    setEditingId(item.componentId);
-    setAddingNew(false);
-    setFormData({
-      componentName: item.componentName,
-      componentTypeId: item.componentType.componentTypeId,
-      calculationMethod: item.calculationMethod,
-      defaultValue: item.defaultValue,
-      description: item.description,
-      required: item.required
-    });
-  };
-
-  const cancel = () => {
-    setEditingId(null);
-    setAddingNew(false);
-    setFormData({
-      componentName: "",
-      componentTypeId: "",
-      calculationMethod: "fixed",
-      defaultValue: 0,
-      description: "",
-      required: false
-    });
-  };
-
-  const saveAction = async (id) => {
-    if (!formData.componentName || !formData.componentTypeId) return;
-    const payload = {
-      ...formData,
-      componentType: { componentTypeId: formData.componentTypeId }
-    };
-    try {
-      if (addingNew) await api.post(COMPONENT_API, payload);
-      else await api.put(`${COMPONENT_API}/${id}`, payload);
-      fetchComponents();
-      cancel();
-    } catch (err) {
-      alert("Save failed. Check input or backend validation.");
+      console.error("Error fetching employee specific salary components", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async () => {
     try {
-      await api.delete(`${COMPONENT_API}/${deleteId}`);
-      fetchComponents();
+      await api.delete(`${ESC_API}/${deleteId}`);
+      fetchEmployeeComponents();
       setShowConfirm(false);
     } catch {
-      alert("Cannot delete. Component may be in use.");
+      alert("Delete failed. This record might be linked to processed payroll.");
       setShowConfirm(false);
     }
   };
 
+  if (loading) return <div className="loader">Loading Employee Pay Components...</div>;
+
   return (
-    <div className="org-section payroll-theme-alt column-half">
+    <div className="org-section payroll-theme-alt column-full">
       <div className="section-header">
-        <h3>Salary Components</h3>
-        <button
-          className="add-btn"
-          onClick={() => {
-            setAddingNew(true);
-            setEditingId(null);
-            setFormData({
-              componentName: "",
-              componentTypeId: "",
-              calculationMethod: "fixed",
-              defaultValue: 0,
-              description: "",
-              required: false
-            });
-          }}
-        >
-          + Add Component
+        <h3>Individual Employee Pay Structure</h3>
+        <button className="add-btn">
+          + Assign New Component
         </button>
       </div>
 
@@ -126,211 +53,63 @@ export default function SalaryComponents() {
         <table className="org-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Method</th>
-              <th>Default</th>
-              <th>Description</th>
-              <th>Required</th>
-              <th style={{ textAlign: "center", width: "20%" }}>Actions</th>
+              {/* Changed Column Names as requested */}
+              <th>ESC ID</th>
+              <th>Employee Name</th>
+              <th>Pay Component</th>
+              <th>Assigned Value</th>
+              <th>Status</th>
+              <th>Effective From</th>
+              <th>Effective To</th>
+              <th style={{ textAlign: "center", width: "150px" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {addingNew && (
-              <tr className="adding-row">
-                <td>New</td>
-                <td>
-                  <input
-                    autoFocus
-                    value={formData.componentName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, componentName: e.target.value })
-                    }
-                  />
-                </td>
-                <td>
-                  <select
-                    value={formData.componentTypeId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, componentTypeId: e.target.value })
-                    }
-                  >
-                    <option value="">Select Type</option>
-                    {types.map((t) => (
-                      <option key={t.componentTypeId} value={t.componentTypeId}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <select
-                    value={formData.calculationMethod}
-                    onChange={(e) =>
-                      setFormData({ ...formData, calculationMethod: e.target.value })
-                    }
-                  >
-                    <option value="fixed">Fixed</option>
-                    <option value="percentage_of_basic">Percentage of Basic</option>
-                    <option value="formula">Formula</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={formData.defaultValue}
-                    onChange={(e) =>
-                      setFormData({ ...formData, defaultValue: e.target.value })
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                  />
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={formData.required}
-                    onChange={(e) =>
-                      setFormData({ ...formData, required: e.target.checked })
-                    }
-                  />
-                </td>
-                <td>
-                  <button className="btn-small save" onClick={() => saveAction(null)}>
-                    Save
-                  </button>
-                  <button className="btn-small cancel" onClick={cancel}>
-                    Cancel
-                  </button>
-                </td>
-              </tr>
-            )}
-
-            {components.map((c) => (
-              <tr key={c.componentId}>
-                <td>{c.componentId}</td>
-                <td>
-                  {editingId === c.componentId ? (
-                    <input
-                      value={formData.componentName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, componentName: e.target.value })
-                      }
-                    />
-                  ) : (
-                    c.componentName
-                  )}
-                </td>
-                <td>
-                  {editingId === c.componentId ? (
-                    <select
-                      value={formData.componentTypeId}
-                      onChange={(e) =>
-                        setFormData({ ...formData, componentTypeId: e.target.value })
-                      }
-                    >
-                      {types.map((t) => (
-                        <option key={t.componentTypeId} value={t.componentTypeId}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    c.componentType.name
-                  )}
-                </td>
-                <td>
-                  {editingId === c.componentId ? (
-                    <select
-                      value={formData.calculationMethod}
-                      onChange={(e) =>
-                        setFormData({ ...formData, calculationMethod: e.target.value })
-                      }
-                    >
-                      <option value="fixed">Fixed</option>
-                      <option value="percentage_of_basic">Percentage of Basic</option>
-                      <option value="formula">Formula</option>
-                    </select>
-                  ) : (
-                    c.calculationMethod
-                  )}
-                </td>
-                <td>
-                  {editingId === c.componentId ? (
-                    <input
-                      type="number"
-                      value={formData.defaultValue}
-                      onChange={(e) =>
-                        setFormData({ ...formData, defaultValue: e.target.value })
-                      }
-                    />
-                  ) : (
-                    c.defaultValue
-                  )}
-                </td>
-                <td>
-                  {editingId === c.componentId ? (
-                    <input
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({ ...formData, description: e.target.value })
-                      }
-                    />
-                  ) : (
-                    c.description
-                  )}
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  {editingId === c.componentId ? (
-                    <input
-                      type="checkbox"
-                      checked={formData.required}
-                      onChange={(e) =>
-                        setFormData({ ...formData, required: e.target.checked })
-                      }
-                    />
-                  ) : c.required ? (
-                    "✅"
-                  ) : (
-                    "❌"
-                  )}
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  {editingId === c.componentId ? (
-                    <>
-                      <button className="btn-small save" onClick={() => saveAction(c.componentId)}>
-                        Save
-                      </button>
-                      <button className="btn-small cancel" onClick={cancel}>
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="btn-small update" onClick={() => startEdit(c)}>
+            {components.length > 0 ? (
+              components.map((c) => (
+                <tr key={c.escId}>
+                  <td>{c.escId}</td>
+                  <td>
+                    <strong>{c.employee?.firstName} {c.employee?.lastName}</strong>
+                    <br />
+                    <small style={{ color: '#666' }}>ID: {c.employee?.empId}</small>
+                  </td>
+                  <td>{c.salaryComponent?.componentName}</td>
+                  <td className="time-cell" style={{ color: '#2d3748' }}>
+                    {c.value?.toLocaleString()}
+                  </td>
+                  <td style={{ textAlign: "center" }}>
+                    {c.isActive ? (
+                      <span className="status-badge present">Active</span>
+                    ) : (
+                      <span className="status-badge absent">Inactive</span>
+                    )}
+                  </td>
+                  <td>{c.effectiveFrom}</td>
+                  <td>{c.effectiveTo || "Present"}</td>
+                  <td style={{ textAlign: "center" }}>
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                      <button className="btn-small update">
                         Edit
                       </button>
                       <button
                         className="btn-small delete"
                         onClick={() => {
-                          setDeleteId(c.componentId);
+                          setDeleteId(c.escId);
                           setShowConfirm(true);
                         }}
                       >
                         Delete
                       </button>
-                    </>
-                  )}
-                </td>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="8" className="no-data">No specific employee salary components found.</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -339,7 +118,7 @@ export default function SalaryComponents() {
         show={showConfirm}
         onConfirm={handleDelete}
         onCancel={() => setShowConfirm(false)}
-        message="Delete this component? This may affect payroll calculations."
+        message="Are you sure you want to remove this salary component from this employee?"
       />
     </div>
   );

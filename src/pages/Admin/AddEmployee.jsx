@@ -21,11 +21,16 @@ const AddEmployee = () => {
     positionId: "", 
     isActive: true, 
     basicSalary: 0,
-    joiningDate: new Date().toISOString().split('T')[0]
+    joiningDate: new Date().toISOString().split('T')[0],
+    bankId: "",
+    accountNumber: "",
+    accountType: "SALARY",
+    currency: "NPR"
   });
 
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
+  const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -33,9 +38,15 @@ const AddEmployee = () => {
   useEffect(() => {
     const loadInit = async () => {
       try {
-        const [d, p] = await Promise.all([api.get("/departments"), api.get("/designations")]);
+        const [d, p, b] = await Promise.all([
+          api.get("/departments"), 
+          api.get("/designations"),
+          api.get("/banks")
+        ]);
+        
         setDepartments(d.data); 
         setPositions(p.data);
+        setBanks(b.data);
         
         if (isEditMode) {
           const res = await getEmployeeById(id);
@@ -43,7 +54,11 @@ const AddEmployee = () => {
           setFormData({
             ...u, 
             departmentId: u.department?.deptId || "", 
-            positionId: u.position?.designationId || ""
+            positionId: u.position?.designationId || "",
+            bankId: u.bankAccount?.[0]?.bank?.bankId || u.bankAccount?.bank?.bankId || "",
+            accountNumber: u.bankAccount?.[0]?.accountNumber || u.bankAccount?.accountNumber || "",
+            accountType: u.bankAccount?.[0]?.accountType || u.bankAccount?.accountType || "SALARY",
+            currency: u.bankAccount?.[0]?.currency || u.bankAccount?.currency || "NPR"
           });
         }
       } catch (e) { 
@@ -53,13 +68,25 @@ const AddEmployee = () => {
     loadInit();
   }, [id, isEditMode]);
 
+  // --- AUTOMATIC SALARY FETCHING LOGIC ---
+  useEffect(() => {
+    if (formData.positionId && positions.length > 0) {
+      const selectedPos = positions.find(p => String(p.designationId) === String(formData.positionId));
+      if (selectedPos) {
+        setFormData(prev => ({
+          ...prev,
+          basicSalary: selectedPos.baseSalary // Automatically sets the salary
+        }));
+      }
+    }
+  }, [formData.positionId, positions]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
 
-    // 10-Digit Contact Validation
     if (!/^\d{10}$/.test(formData.contact)) {
       setErrorMsg("Contact number must be exactly 10 digits.");
       setLoading(false);
@@ -67,7 +94,6 @@ const AddEmployee = () => {
     }
 
     try {
-      // Step 1: Verification Logic
       const userRes = await api.get(`/users/search?email=${formData.email}`);
       const userData = userRes.data;
       const foundUser = Array.isArray(userData) ? userData[0] : userData;
@@ -82,21 +108,22 @@ const AddEmployee = () => {
         ...formData, 
         user: { userId: foundUser.userId }, 
         department: { deptId: parseInt(formData.departmentId) }, 
-        position: { designationId: parseInt(formData.positionId) } 
+        position: { designationId: parseInt(formData.positionId) },
+        bankAccount: [{
+          bank: { bankId: parseInt(formData.bankId) },
+          accountNumber: formData.accountNumber,
+          accountType: formData.accountType,
+          currency: formData.currency,
+          isPrimary: true
+        }]
       };
 
-      // Step 2: Save Data
       isEditMode ? await updateEmployee(id, payload) : await createEmployee(payload);
-      
-      // Step 3: Success Feedback
       setSuccessMsg(isEditMode ? "Employee updated successfully!" : "Employee registered successfully!");
-      
-      setTimeout(() => {
-        navigate("/admin/employees");
-      }, 2000); 
+      setTimeout(() => navigate("/admin/employees"), 2000); 
 
     } catch (err) { 
-      setErrorMsg(err.response?.data?.message || "Operation failed. Verify database connectivity.");
+      setErrorMsg(err.response?.data?.message || "Operation failed.");
       setLoading(false); 
     }
   };
@@ -129,26 +156,8 @@ const AddEmployee = () => {
             </div>
 
             <div className="field-item">
-              <label>Contact (10 Digits)</label>
-              <input 
-                type="text" maxLength="10" value={formData.contact} 
-                onChange={(e) => setFormData({...formData, contact: e.target.value.replace(/\D/g, "")})} 
-                required disabled={!!successMsg}
-              />
-            </div>
-
-            <div className="field-item">
-              <label>Education</label>
-              <input value={formData.education} onChange={(e)=>setFormData({...formData, education: e.target.value})} required disabled={!!successMsg}/>
-            </div>
-
-            <div className="field-item">
-              <label>Marital Status</label>
-              <select value={formData.maritalStatus} onChange={(e)=>setFormData({...formData, maritalStatus: e.target.value})} required disabled={!!successMsg}>
-                <option value="SINGLE">SINGLE</option>
-                <option value="MARRIED">MARRIED</option>
-                <option value="DIVORCED">DIVORCED</option>
-              </select>
+              <label>Contact</label>
+              <input type="text" maxLength="10" value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value.replace(/\D/g, "")})} required disabled={!!successMsg} />
             </div>
 
             <div className="field-item">
@@ -160,21 +169,53 @@ const AddEmployee = () => {
             </div>
 
             <div className="field-item">
-              <label>Position</label>
+              <label>Position (Designation)</label>
               <select value={formData.positionId} onChange={(e)=>setFormData({...formData, positionId: e.target.value})} required disabled={!!successMsg}>
                 <option value="">Select Position...</option>
                 {positions.map(p => <option key={p.designationId} value={p.designationId}>{p.designationTitle}</option>)}
               </select>
             </div>
 
-            <div className="field-item">
-              <label>Basic Salary</label>
-              <input type="number" value={formData.basicSalary} onChange={(e)=>setFormData({...formData, basicSalary: e.target.value})} required disabled={!!successMsg}/>
+            <div className="field-item highlight-field">
+              <label>Basic Salary (Locked)</label>
+              <input 
+                type="text" 
+                value={`Rs. ${formData.basicSalary.toLocaleString()}`} 
+                readOnly 
+                className="locked-input" 
+                style={{ backgroundColor: "#f0f0f0", cursor: "not-allowed", fontWeight: "bold", color: "#2c3e50" }}
+              />
             </div>
 
             <div className="field-item">
               <label>Joining Date</label>
               <input type="date" value={formData.joiningDate} onChange={(e)=>setFormData({...formData, joiningDate: e.target.value})} required disabled={!!successMsg}/>
+            </div>
+
+            <div className="field-item">
+              <label>Bank Name</label>
+              <select value={formData.bankId} onChange={(e)=>setFormData({...formData, bankId: e.target.value})} required disabled={!!successMsg}>
+                <option value="">Select Bank...</option>
+                {banks.map(b => <option key={b.bankId} value={b.bankId}>{b.bankName}</option>)}
+              </select>
+            </div>
+
+            <div className="field-item">
+              <label>Account Number</label>
+              <input value={formData.accountNumber} onChange={(e)=>setFormData({...formData, accountNumber: e.target.value})} required disabled={!!successMsg}/>
+            </div>
+
+            <div className="field-item">
+                <label>Education</label>
+                <input value={formData.education} onChange={(e)=>setFormData({...formData, education: e.target.value})} required disabled={!!successMsg}/>
+            </div>
+
+            <div className="field-item">
+                <label>Marital Status</label>
+                <select value={formData.maritalStatus} onChange={(e)=>setFormData({...formData, maritalStatus: e.target.value})} required disabled={!!successMsg}>
+                    <option value="SINGLE">SINGLE</option>
+                    <option value="MARRIED">MARRIED</option>
+                </select>
             </div>
           </div>
 

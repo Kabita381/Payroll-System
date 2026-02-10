@@ -31,6 +31,9 @@ import AdminPayroll from "./pages/Admin/Payroll.jsx";
 import Report from "./pages/Admin/Report.jsx";
 import SystemConfig from "./pages/Admin/SystemConfig/System-Config.jsx";
 
+// NEW: PAYROLL PREVIEW PAGE
+import PayrollPreview from "./pages/Admin/PayrollPreview.jsx"; 
+
 // EMPLOYEE
 import EmployeeDashboard from "./pages/Employee/EmployeeDashboard.jsx";
 import AttendanceRecords from "./pages/Employee/AttendanceRecords.jsx";
@@ -43,10 +46,8 @@ const ProtectedRoute = ({ allowedRole }) => {
   const savedUser = localStorage.getItem("user_session");
   const user = savedUser ? JSON.parse(savedUser) : null;
 
-  // 1. If no user is logged in, redirect to login
   if (!user || !user.token) return <Navigate to="/" replace />;
 
-  // 2. Extract role (handles object or string)
   const userRoleRaw = typeof user.role === 'object' ? user.role.roleName : user.role;
 
   if (!userRoleRaw) {
@@ -57,7 +58,6 @@ const ProtectedRoute = ({ allowedRole }) => {
   const userRole = userRoleRaw.toUpperCase().trim();
   const requiredRole = allowedRole.toUpperCase().trim();
 
-  // 3. Robust Role Matching (Handles ADMIN vs ROLE_ADMIN)
   const hasAccess = 
     userRole === requiredRole || 
     userRole === requiredRole.replace("ROLE_", "") || 
@@ -86,19 +86,21 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* ACCOUNTANT MODULE (Full Logic Restored) */}
+        {/* ACCOUNTANT MODULE */}
         <Route path="/accountant" element={<ProtectedRoute allowedRole="ROLE_ACCOUNTANT" />}>
           <Route element={<AccountantLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AccountantDashboard />} />
             <Route path="payroll-processing" element={<AccountantPayroll />} />
+            {/* Added Preview for Accountant */}
+            <Route path="payroll-processing/preview" element={<PayrollPreview />} /> 
             <Route path="salary-management" element={<Salary />} />
             <Route path="tax-compliance" element={<Tax />} />
             <Route path="financial-reports" element={<AccountantReport />} />
           </Route>
         </Route>
 
-        {/* ADMIN MODULE (Full Logic Restored) */}
+        {/* ADMIN MODULE */}
         <Route path="/admin" element={<ProtectedRoute allowedRole="ROLE_ADMIN" />}>
           <Route element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -119,13 +121,19 @@ function App() {
             {/* SYSTEM FEATURES */}
             <Route path="attendance" element={<Attendance />} />
             <Route path="leave" element={<Leave />} />
-            <Route path="payroll" element={<AdminPayroll />} />
+            
+            {/* PAYROLL MANAGEMENT + PREVIEW */}
+            <Route path="payroll">
+              <Route index element={<AdminPayroll />} />
+              <Route path="preview" element={<PayrollPreview />} />
+            </Route>
+
             <Route path="report" element={<Report />} />
             <Route path="system-config" element={<SystemConfig />} />
           </Route>
         </Route>
 
-        {/* EMPLOYEE MODULE (Full Logic Restored) */}
+        {/* EMPLOYEE MODULE */}
         <Route path="/employee" element={<ProtectedRoute allowedRole="ROLE_EMPLOYEE" />}>
           <Route element={<EmployeeLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />

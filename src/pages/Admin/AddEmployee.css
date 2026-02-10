@@ -75,9 +75,10 @@
 
 .btn-cancel {
   flex: 1;
+  color: rgb(17, 4, 4);
   padding: 15px;
   background: #062a4f;
-  border: 1px solid #081d36;
+  border: 1px solid #153b69;
   border-radius: 8px;
   cursor: pointer;
 }
