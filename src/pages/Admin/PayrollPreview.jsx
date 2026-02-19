@@ -59,7 +59,11 @@ const PayrollPreview = () => {
     try {
         setIsProcessing(true);
 
-        // 1. STAGE 1: Process payroll
+        /**
+         * STAGE 1: Process payroll (Create PENDING_PAYMENT record)
+         * The backend now automatically cleans up previous PENDING records for this 
+         * specific period before creating the new one.
+         */
         const savedPayroll = await processEmployeePayroll({
             empId: data.employee?.empId,
             festivalBonus: data.festivalBonus ?? 0, 
@@ -68,23 +72,27 @@ const PayrollPreview = () => {
             paymentMethodId: selectedPaymentMethodId 
         });
 
-        // 2. Extract ID safely
-        const actualId = savedPayroll?.payrollId || savedPayroll?.id;
+        // Resolve ID from response
+        const actualId = savedPayroll?.payrollId || savedPayroll?.id || savedPayroll?.data?.payrollId;
 
         if (!actualId) {
             console.error("Payload received from server:", savedPayroll);
-            throw new Error("Server processed payroll but did not return an ID.");
+            throw new Error("Server processed payroll but did not return a valid ID.");
         }
 
-        console.log("Success! Initiating eSewa with ID:", actualId);
+        console.log("Stage 1 Complete. Initiating eSewa for Payroll ID:", actualId);
 
-        // 3. Fetch eSewa params
+        /**
+         * STAGE 2: Fetch eSewa signed parameters using the fresh ID
+         */
         const response = await api.get(`/esewa/initiate/${actualId}`);
+        
+        // Redirect to External Gateway
         redirectToEsewa(response.data);
 
     } catch (err) {
         const errorMessage = err.response?.data?.message || err.message;
-        alert("Transaction failed: " + errorMessage);
+        alert("Transaction Error: " + errorMessage);
         setIsProcessing(false);
     }
 };
@@ -100,7 +108,7 @@ const PayrollPreview = () => {
                     <div style={{ marginTop: '10px', padding: '8px 15px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', display: 'inline-block' }}>
                         <span style={{ fontWeight: '600' }}>{data.employee?.firstName} {data.employee?.lastName}</span>
                         <span style={{ margin: '0 10px', opacity: 0.5 }}>|</span>
-                        <span>Employee ID: {data.employee?.empId}</span>
+                        <span>Period: {data.payPeriodStart} to {data.payPeriodEnd}</span>
                     </div>
                 </div>
                 
@@ -130,8 +138,11 @@ const PayrollPreview = () => {
                         </div>
                     </div>
 
-                    <div style={{ marginBottom: '25px', padding: '10px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                         <span style={{ fontSize: '13px', color: '#666' }}>Disbursement Method ID: <strong>{selectedPaymentMethodId}</strong></span>
+                    <div style={{ marginBottom: '25px', padding: '15px', border: '1px solid #e0e0e0', borderRadius: '12px', backgroundColor: '#fcfcfc', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                         <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#3498db'}}></div>
+                         <span style={{ fontSize: '14px', color: '#555' }}>
+                            Disbursement: <strong>{data.paymentMethod?.methodName || 'eSewa Digital Wallet'}</strong>
+                         </span>
                     </div>
 
                     <div className="section" style={{ marginBottom: '25px' }}>
@@ -171,7 +182,11 @@ const PayrollPreview = () => {
                             onClick={handleConfirm} 
                             style={isProcessing ? {...btnPrimary, opacity: 0.7, cursor: 'not-allowed'} : btnPrimary}
                         >
-                            {isProcessing ? "Processing..." : "Disburse via eSewa"}
+                            {isProcessing ? (
+                                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                    Redirecting to eSewa...
+                                </span>
+                            ) : "Confirm & Disburse"}
                         </button>
                     </div>
                 </div>
@@ -181,7 +196,7 @@ const PayrollPreview = () => {
 };
 
 const rowStyle = { display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '15px', color: '#444' };
-const btnPrimary = { flex: 2, padding: '15px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' };
+const btnPrimary = { flex: 2, padding: '15px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' };
 const btnSecondary = { flex: 1, padding: '15px', background: '#fff', color: '#7f8c8d', border: '1px solid #dcdde1', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' };
 
 export default PayrollPreview;
