@@ -8,6 +8,12 @@ import {
 } from "../../api/payrollApi";
 import "./Payroll.css";
 
+// Constants for Month Management
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 // History Modal Component
 const HistoryModal = ({ isOpen, onClose, history, employeeName }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
@@ -78,6 +84,9 @@ const HistoryModal = ({ isOpen, onClose, history, employeeName }) => {
 
 const PayrollManagement = () => {
   const navigate = useNavigate();
+  
+  // FIXED: Hooks moved inside the component
+  const [emailStatus, setEmailStatus] = useState({ loading: false, id: null });
   const [payrolls, setPayrolls] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]); 
@@ -88,134 +97,143 @@ const PayrollManagement = () => {
   const [selectedEmpName, setSelectedEmpName] = useState("");
   const [processingInputs, setProcessingInputs] = useState({});
 
-  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth()]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+  }, [selectedMonth, selectedYear]);
 
-  useEffect(() => {
-    window.addEventListener('focus', fetchData);
-    return () => window.removeEventListener('focus', fetchData);
-  }, []);
+  const getMonthNumber = (monthName) => MONTHS.indexOf(monthName) + 1;
+  const getPaddedMonth = (monthName) => String(getMonthNumber(monthName)).padStart(2, '0');
+
+  const isFutureDate = useMemo(() => {
+    const now = new Date();
+    const selDate = new Date(parseInt(selectedYear), getMonthNumber(selectedMonth) - 1);
+    const currDate = new Date(now.getFullYear(), now.getMonth());
+    return selDate > currDate;
+  }, [selectedMonth, selectedYear]);
+
+  const isPastDate = useMemo(() => {
+    const now = new Date();
+    const selDate = new Date(parseInt(selectedYear), getMonthNumber(selectedMonth) - 1);
+    const currDate = new Date(now.getFullYear(), now.getMonth());
+    return selDate < currDate;
+  }, [selectedMonth, selectedYear]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      const monthMap = {
+        "JANUARY": "01", "FEBRUARY": "02", "MARCH": "03", "APRIL": "04",
+        "MAY": "05", "JUNE": "06", "JULY": "07", "AUGUST": "08",
+        "SEPTEMBER": "09", "OCTOBER": "10", "NOVEMBER": "11", "DECEMBER": "12"
+      };
+      const monthValue = monthMap[selectedMonth.toUpperCase()];
+
       const [pRes, eRes, mRes] = await Promise.all([
         api.get("/payrolls"), 
-        api.get("/employees"),
+        api.get("/payrolls/batch-calculate", {
+            params: { month: monthValue, year: selectedYear }
+        }),
         api.get("/payment-methods")
       ]);
-      // PRINT THIS: This shows us exactly what is in your Payroll Database
-    console.log("--- DATABASE CHECK: ALL PAYROLL RECORDS ---");
-    console.table(pRes.data);  setPayrolls(pRes.data || []);
 
-      setEmployees(eRes.data || []);
+      setPayrolls(pRes.data || []);
+      setEmployees(Array.isArray(eRes.data) ? eRes.data : []);
       setPaymentMethods(mRes.data || []);
+
     } catch (err) { 
-      console.error("Sync Error:", err); 
+      console.error("Sync Error:", err);
     } finally { 
       setLoading(false); 
     }
   };
-const currentStatusMap = useMemo(() => {
+
+  const currentStatusMap = useMemo(() => {
     const map = new Map();
-    // targetPeriod will be "2026-02" based on your dropdown
-    const targetPeriod = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`; 
+    const targetPeriod = `${selectedYear}-${getPaddedMonth(selectedMonth)}`; 
     
-    console.log("--- Payroll Lock Debug ---");
-    console.log("Targeting Period:", targetPeriod);
-
-    if (!Array.isArray(payrolls) || payrolls.length === 0) {
-      console.log("No payrolls found in state.");
-      return map;
-    }
-
     payrolls.forEach(p => {
-      // 1. Keep original logic: Skip voided
-      if (p.status === "VOIDED" || p.isVoided) return;
-      
-      // 2. Based on your SQL desc: the ID is either in p.emp_id or p.employee.empId
+      if (p.status === "VOIDED") return;
       const empId = p.employee?.empId || p.empId;
-      
-      // 3. Match the date format "2026-02-01" from your SQL output
-      let recordDate = "";
-      if (p.payPeriodStart && typeof p.payPeriodStart === 'string') {
-        recordDate = p.payPeriodStart.substring(0, 7); // Takes "2026-02"
-      } else if (Array.isArray(p.payPeriodStart)) {
-        recordDate = `${p.payPeriodStart[0]}-${String(p.payPeriodStart[1]).padStart(2, '0')}`;
-      }
+      let recordDate = Array.isArray(p.payPeriodStart) 
+        ? `${p.payPeriodStart[0]}-${String(p.payPeriodStart[1]).padStart(2, '0')}`
+        : p.payPeriodStart?.substring(0, 7);
 
-      console.log(`Checking DB Record: Emp ${empId} for Date ${recordDate}`);
-
-      // 4. THE FIX: Link the employee to the record
       if (empId && recordDate === targetPeriod) {
-        console.log(`MATCH! Locking Row for Employee ID: ${empId}`);
         map.set(String(empId), p);
       }
     });
-    
     return map;
-}, [payrolls, selectedMonth, selectedYear]);
+  }, [payrolls, selectedMonth, selectedYear]);
 
-
-  // For debugging: Log the currentStatusMap whenever it changes
   const filteredEmployees = useMemo(() => {
-
-    const result = employees.filter(e => 
-      `${e.firstName} ${e.lastName}`.toLowerCase().includes(search.toLowerCase())
-    );
-    return result.sort((a, b) => b.empId - a.empId);
+    return employees
+      .filter(e => (e.fullName || `${e.firstName} ${e.lastName}`).toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => b.empId - a.empId);
   }, [employees, search]);
 
-  const indexOfLastRecord = currentPage * recordsPerPage;
-  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-  const currentRecords = filteredEmployees.slice(indexOfFirstRecord, indexOfLastRecord);
   const totalPages = Math.ceil(filteredEmployees.length / recordsPerPage);
+  const currentRecords = filteredEmployees.slice(
+    (currentPage - 1) * recordsPerPage, 
+    currentPage * recordsPerPage
+  );
+
+  const handleEmail = async (payrollId) => {
+    setEmailStatus({ loading: true, id: payrollId });
+    console.log(`%c[Email Process] Starting for Payroll ID: ${payrollId}...`, "color: blue; font-weight: bold;");
+    
+    const interval = setInterval(() => {
+      console.log("[Email Process] Waiting for Mail Server response...");
+    }, 2000);
+
+    try {
+      const response = await emailPayslip(payrollId);
+      clearInterval(interval);
+      console.log("%c[Email Process] SUCCESS: Message delivered to SMTP server.", "color: green; font-weight: bold;");
+      alert("✅ Payslip sent successfully!");
+    } catch (err) {
+      clearInterval(interval);
+      console.error("%c[Email Process] FAILED:", "color: red; font-weight: bold;", err);
+      const errorMessage = err.response?.data?.message || "Check network/SMTP logs.";
+      alert(`❌ Failed to send email: ${errorMessage}`);
+    } finally {
+      setEmailStatus({ loading: false, id: null });
+    }
+  };
 
   const handleInputChange = (empId, field, val) => {
-    if (currentStatusMap.has(String(empId))) return;
     setProcessingInputs(prev => ({
       ...prev,
-      [empId]: {
-        ...(prev[empId] || { festivalBonus: 0, otherBonus: 0, citContribution: 0, paymentMethodId: "" }),
-        [field]: val
-      }
+      [empId]: { ...(prev[empId] || {}), [field]: val }
     }));
   };
 
   const handleActionRun = async (emp) => {
     const inputs = processingInputs[emp.empId] || {};
-    if (!inputs.paymentMethodId) return alert(`Select a Payment Method for ${emp.firstName}`);
-
+    if (!inputs.paymentMethodId) return alert("Please select a payment method.");
     try {
         const payload = {
-            empId: parseInt(emp.empId), 
+            empId: emp.empId, 
             festivalBonus: parseFloat(inputs.festivalBonus || 0),
             bonuses: parseFloat(inputs.otherBonus || 0),
             citContribution: parseFloat(inputs.citContribution || 0),
-            payPeriodStart: `${selectedYear}-${selectedMonth}-01`
+            payPeriodStart: `${selectedYear}-${getPaddedMonth(selectedMonth)}-01`
         };
         const res = await api.post("/payrolls/preview", payload);
         navigate("/admin/payroll/preview", { 
             state: { previewData: res.data, selectedPaymentMethodId: inputs.paymentMethodId } 
         });
-    } catch (err) {
-        alert(err.response?.data?.message || "Calculation failed");
-        fetchData(); 
-    }
-  };
-
-  const handleEmail = async (id) => {
-    try { await emailPayslip(id); alert("Payslip emailed."); } catch { alert("Email failed."); }
+    } catch (err) { alert(err.response?.data?.message || "Run failed"); }
   };
 
   const handleVoid = async (p) => {
     if (window.confirm(`Void payroll for ${p.employee?.firstName}?`)) {
-      try { await voidPayrollRecord(p.payrollId); fetchData(); } catch { alert("Void failed."); }
+      try { await voidPayrollRecord(p.payrollId); fetchData(); } catch { alert("Void failed"); }
     }
   };
 
@@ -223,7 +241,7 @@ const currentStatusMap = useMemo(() => {
     try {
       const res = await getEmployeeHistory(emp.empId);
       setHistoryData(res.data || []);
-      setSelectedEmpName(`${emp.firstName} ${emp.lastName}`);
+      setSelectedEmpName(emp.fullName || `${emp.firstName} ${emp.lastName}`);
       setIsHistoryOpen(true);
     } catch (err) { console.error(err); }
   };
@@ -236,26 +254,27 @@ const currentStatusMap = useMemo(() => {
         <div>
           <h1 className="header-title">Payroll Command Center</h1>
           <p className="header-subtitle">
-            Processing: {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+            Current Period: <strong>{selectedMonth} {selectedYear}</strong>
           </p>
         </div>
-
         <div className="header-controls">
-          <select className="filter-select" value={selectedMonth} 
-            onChange={(e) => { setSelectedMonth(e.target.value); setCurrentPage(1); }}>
-            {["01","02","03","04","05","06","07","08","09","10","11","12"].map(m => (
-              <option key={m} value={m}>{new Date(2000, m-1).toLocaleString('default', {month: 'long'})}</option>
-            ))}
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => {setSelectedMonth(e.target.value); setCurrentPage(1);}} 
+            className="filter-select"
+          >
+            {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-
-          <select className="filter-select" value={selectedYear} 
-            onChange={(e) => { setSelectedYear(e.target.value); setCurrentPage(1); }}>
-            {[2024, 2025, 2026, 2027].map(y => (
-              <option key={y} value={y.toString()}>{y}</option>
-            ))}
+          <select 
+            value={selectedYear} 
+            onChange={(e) => {setSelectedYear(e.target.value); setCurrentPage(1);}} 
+            className="filter-select"
+          >
+            {["2024", "2025", "2026", "2027"].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-
-          <input className="search-bar" placeholder="Search employee..." 
+          <input 
+            className="search-bar" 
+            placeholder="Search employee..." 
             onChange={(e)=>{setSearch(e.target.value); setCurrentPage(1);}} 
           />
         </div>
@@ -266,7 +285,7 @@ const currentStatusMap = useMemo(() => {
           <thead>
             <tr>
               <th>Employee</th>
-              <th>Basic Salary</th>
+              <th>Earned Salary</th>
               <th>Festival Bonus</th>
               <th>Other Bonus</th>
               <th>CIT</th>
@@ -276,103 +295,122 @@ const currentStatusMap = useMemo(() => {
             </tr>
           </thead>
           <tbody>
-            {currentRecords.map(emp => {
-                const record = currentStatusMap.get(String(emp.empId)); 
-                const isLocked = !!record;
-                const isPending = record?.status === "PENDING_PAYMENT";
-                const inputs = processingInputs[emp.empId] || { festivalBonus: 0, otherBonus: 0, citContribution: 0, paymentMethodId: "" };
+            {currentRecords.length > 0 ? currentRecords.map(emp => {
+              const record = currentStatusMap.get(String(emp.empId));
+              const inputs = processingInputs[emp.empId] || { festivalBonus:0, otherBonus:0, citContribution:0, paymentMethodId:"" };
 
-                return (
-                  <tr key={emp.empId} className={isLocked ? "row-locked" : "table-row-hover"}>
-                    <td>
-                      <div className="emp-info">
-                        <span className="emp-name">{emp.firstName} {emp.lastName}</span>
+              return (
+                <tr key={emp.empId} className={record ? "row-locked" : "table-row-hover"}>
+                  <td>
+                    <div className="emp-info">
+                        <span className="emp-name">{emp.fullName || `${emp.firstName} ${emp.lastName}`}</span>
                         <span className="header-subtitle">{emp.maritalStatus}</span>
-                      </div>
-                    </td>
-                    <td className="bold">Rs. {emp.basicSalary?.toLocaleString()}</td>
-                    
-                    <td>
-                      {isLocked ? (
-                        <span className="locked-value">Rs. {record.festivalBonus?.toLocaleString() || 0}</span>
-                      ) : (
-                        <input type="number" className="bonus-input-small" value={inputs.festivalBonus} 
-                          onChange={(e)=>handleInputChange(emp.empId, 'festivalBonus', e.target.value)} />
-                      )}
-                    </td>
+                    </div>
+                  </td>
 
-                    <td>
-                      {isLocked ? (
-                        <span className="locked-value">Rs. {record.otherBonuses?.toLocaleString() || 0}</span>
-                      ) : (
-                        <input type="number" className="bonus-input-small" value={inputs.otherBonus} 
-                          onChange={(e)=>handleInputChange(emp.empId, 'otherBonus', e.target.value)} />
-                      )}
-                    </td>
+                  <td className="bold">
+                    Rs. {emp.earnedSalary?.toLocaleString() ?? emp.basicSalary?.toLocaleString()}
+                  </td>
+                  
+                  <td>
+                    {record ? <span className="locked-value">Rs. {record.festivalBonus?.toLocaleString()}</span> : 
+                    <input type="number" disabled={isFutureDate || isPastDate} className="bonus-input-small" value={inputs.festivalBonus} onChange={(e)=>handleInputChange(emp.empId, 'festivalBonus', e.target.value)}/>}
+                  </td>
+                  <td>
+                    {record ? <span className="locked-value">Rs. {record.otherBonuses?.toLocaleString()}</span> : 
+                    <input type="number" disabled={isFutureDate || isPastDate} className="bonus-input-small" value={inputs.otherBonus} onChange={(e)=>handleInputChange(emp.empId, 'otherBonus', e.target.value)}/>}
+                  </td>
+                  <td>
+                    {record ? <span className="locked-value">Rs. {record.citContribution?.toLocaleString()}</span> : 
+                    <input type="number" disabled={isFutureDate || isPastDate} className="bonus-input-small" value={inputs.citContribution} onChange={(e)=>handleInputChange(emp.empId, 'citContribution', e.target.value)}/>}
+                  </td>
+                  <td>
+                    {record ? <span className="method-label">{record.paymentMethod?.methodName || "Bank"}</span> : 
+                    <select disabled={isFutureDate || isPastDate} className="filter-select full-width-select" onChange={(e)=>handleInputChange(emp.empId, 'paymentMethodId', e.target.value)}>
+                      <option value="">Select</option>
+                      {paymentMethods.map(m => <option key={m.paymentMethodId} value={m.paymentMethodId}>{m.methodName}</option>)}
+                    </select>}
+                  </td>
+                  
+                  <td>
+                    <span className={`status-badge status-${(record?.status || "READY").toLowerCase().replace('_', '-')}`}>
+                        {record?.status || (isPastDate ? "NO RECORD" : "READY")}
+                    </span>
+                  </td>
 
-                    <td>
-                      {isLocked ? (
-                        <span className="locked-value">Rs. {record.citContribution?.toLocaleString() || 0}</span>
-                      ) : (
-                        <input type="number" className="bonus-input-small" value={inputs.citContribution} 
-                          onChange={(e)=>handleInputChange(emp.empId, 'citContribution', e.target.value)} />
-                      )}
-                    </td>
-
-                    <td>
-                      {isLocked ? (
-                        <span className="method-label">{record.paymentMethod?.methodName || 'Bank'}</span>
-                      ) : (
-                        <select className="filter-select full-width-select" value={inputs.paymentMethodId}
-                          onChange={(e) => handleInputChange(emp.empId, 'paymentMethodId', e.target.value)}>
-                          <option value="">Select</option>
-                          {paymentMethods.map(m => (
-                            <option key={m.paymentMethodId} value={m.paymentMethodId}>{m.methodName}</option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-
-                    <td>
-                        <span className={`status-badge status-${(record?.status || 'READY').toLowerCase().replace('_', '-')}`}>
-                            {record?.status || "READY"}
-                        </span>
-                    </td>
-                    
-                    <td className="actions-cell">
-                        {!isLocked ? (
-                          <button className="btn-icon btn-pdf" onClick={() => handleActionRun(emp)}>Run</button>
-                        ) : (
-                          <>
-                            <button className="btn-icon btn-email" onClick={() => handleEmail(record.payrollId)} disabled={isPending}>Email</button>
-                            <button className="btn-icon btn-void" onClick={() => handleVoid(record)}>Void</button>
-                          </>
-                        )}
-                        <button className="btn-icon btn-history" onClick={() => handleViewHistory(emp)}>History</button>
-                    </td>
-                  </tr>
-                );
-              })}
+                  <td className="actions-cell">
+                    {!record ? (
+                      !isPastDate && (
+                        <button className="btn-icon btn-pdf" disabled={isFutureDate} onClick={()=>handleActionRun(emp)}>
+                            Run
+                        </button>
+                      )
+                    ) : (
+                      <>
+                        <button 
+                          className="btn-icon btn-email" 
+                          disabled={emailStatus.loading && emailStatus.id === record.payrollId} 
+                          onClick={() => handleEmail(record.payrollId)}
+                        >
+                          {emailStatus.loading && emailStatus.id === record.payrollId ? "Sending..." : "Email"}
+                        </button>
+                        <button className="btn-icon btn-void" onClick={()=>handleVoid(record)}>Void</button>
+                      </>
+                    )}
+                    <button className="btn-icon btn-history" onClick={()=>handleViewHistory(emp)}>History</button>
+                  </td>
+                </tr>
+              );
+            }) : (
+              <tr>
+                <td colSpan="8" className="empty-state">
+                  No payroll records found for {selectedMonth} {selectedYear}.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
 
         <div className="pagination-footer">
-          <div className="pagination-info">
-            Showing {indexOfFirstRecord + 1} to {Math.min(indexOfLastRecord, filteredEmployees.length)} of {filteredEmployees.length} employees
-          </div>
-          <div className="pagination-buttons">
-            <button className="p-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)}>Previous</button>
+          <span className="header-subtitle">
+            Showing <strong>{currentRecords.length}</strong> of {filteredEmployees.length} employees
+          </span>
+          <div className="header-controls">
+            <button 
+                className="p-btn" 
+                disabled={currentPage === 1} 
+                onClick={()=>setCurrentPage(prev => Math.max(prev - 1, 1))}
+            >
+                Prev
+            </button>
+            
             {[...Array(totalPages)].map((_, i) => (
-              <button key={i} className={`p-btn ${currentPage === i + 1 ? 'active' : ''}`} onClick={() => setCurrentPage(i + 1)}>
-                {i + 1}
+              <button 
+                key={i} 
+                className={`p-btn ${currentPage === i+1 ? 'active' : ''}`} 
+                onClick={()=>setCurrentPage(i+1)}
+              >
+                {i+1}
               </button>
             ))}
-            <button className="p-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}>Next</button>
+
+            <button 
+                className="p-btn" 
+                disabled={currentPage === totalPages || totalPages === 0} 
+                onClick={()=>setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            >
+                Next
+            </button>
           </div>
         </div>
       </div>
 
-      <HistoryModal isOpen={isHistoryOpen} onClose={()=>setIsHistoryOpen(false)} history={historyData} employeeName={selectedEmpName} />
+      <HistoryModal 
+        isOpen={isHistoryOpen} 
+        onClose={()=>setIsHistoryOpen(false)} 
+        history={historyData} 
+        employeeName={selectedEmpName} 
+      />
     </div>
   );
 };
