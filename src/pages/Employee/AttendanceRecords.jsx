@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { getProfileByUserId } from "../../api/employeeApi";
-import "./EmployeeDashboard.css";
+import "./AttendanceRecord.css";
 
 const AttendanceRecords = () => {
     // Session and Identity State
