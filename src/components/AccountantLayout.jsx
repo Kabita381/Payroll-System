@@ -16,6 +16,7 @@ const AccountantLayout = () => {
     if (path.includes('dashboard')) return 'Financial Dashboard';
     if (path.includes('payroll')) return 'Payroll Verification';
     if (path.includes('salary')) return 'Salary Structure';
+    if (path.includes('tax')) return 'Tax & Compliance';
     return 'Finance Portal';
   };
 
@@ -24,7 +25,7 @@ const AccountantLayout = () => {
       <aside className="sidebar">
         <div className="sidebar-content-wrapper">
           <div className="sidebar-logo">
-            <h2>CPMS</h2>
+            <h2>Centralized Management</h2>
             <p>Payroll System</p>
           </div>
 
@@ -35,6 +36,7 @@ const AccountantLayout = () => {
             <Link to="salary-management" className={location.pathname.includes('salary') ? 'active' : ''}>
               💸 Salary Management
             </Link>
+            {/* The link below will trigger the PayrollManagement component via the Router */}
             <Link to="payroll-processing" className={location.pathname.includes('payroll') ? 'active' : ''}>
               💰 Payroll Processing
             </Link>

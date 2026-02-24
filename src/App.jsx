@@ -12,14 +12,13 @@ import ForgotPassword from "./pages/Common/ForgotPassword.jsx";
 import ResetPassword from "./pages/Common/ResetPassword.jsx";
 
 /* ================= DASHBOARDS & SUBPAGES ================= */
-// ACCOUNTANT
 import AccountantDashboard from "./pages/Accountant/AccountantDashboard.jsx";
-import AccountantPayroll from "./pages/Accountant/Payroll.jsx";
+// Accountant now uses the Admin Payroll component
+import AdminPayroll from "./pages/Admin/Payroll.jsx"; 
 import Salary from "./pages/Accountant/Salary.jsx";
 import Tax from "./pages/Accountant/Tax.jsx";
 import AccountantReport from "./pages/Accountant/Report.jsx";
 
-// ADMIN
 import AdminDashboard from "./pages/Admin/AdminDashboard.jsx";
 import Users from "./pages/Admin/users.jsx";
 import AddUser from "./pages/Admin/AddUser.jsx";
@@ -27,14 +26,14 @@ import Employees from "./pages/Admin/Employees.jsx";
 import AddEmployee from "./pages/Admin/AddEmployee.jsx";
 import Attendance from "./pages/Admin/Attendance.jsx";
 import Leave from "./pages/Admin/Leave.jsx";
-import AdminPayroll from "./pages/Admin/Payroll.jsx";
 import Report from "./pages/Admin/Report.jsx";
 import SystemConfig from "./pages/Admin/SystemConfig/System-Config.jsx";
+import HolidaySettings from "./pages/Admin/Organization/HolidaySettings.jsx";
 
-// SHARED PAYROLL PREVIEW
+/* ================= NEW PAYROLL WORKFLOW PAGES ================= */
+import PayrollAdjustment from "./pages/Admin/PayrollAdjustment.jsx"; 
 import PayrollPreview from "./pages/Admin/PayrollPreview.jsx"; 
 
-// EMPLOYEE
 import EmployeeDashboard from "./pages/Employee/EmployeeDashboard.jsx";
 import AttendanceRecords from "./pages/Employee/AttendanceRecords.jsx";
 import LeaveManagement from "./pages/Employee/LeaveManagement.jsx";
@@ -42,10 +41,6 @@ import SalaryAnalytics from "./pages/Employee/SalaryAnalytics.jsx";
 import Settings from "./pages/Employee/Settings.jsx";
 
 /* ================= PROTECTED ROUTE COMPONENT ================= */
-/**
- * Updated to support multiple allowed roles.
- * allowedRoles can now be a string "ROLE_ADMIN" or an array ["ROLE_ADMIN", "ROLE_ACCOUNTANT"]
- */
 const ProtectedRoute = ({ allowedRoles }) => {
   const savedUser = localStorage.getItem("user_session");
   const user = savedUser ? JSON.parse(savedUser) : null;
@@ -53,18 +48,10 @@ const ProtectedRoute = ({ allowedRoles }) => {
   if (!user || !user.token) return <Navigate to="/" replace />;
 
   const userRoleRaw = typeof user.role === 'object' ? user.role.roleName : user.role;
-
-  if (!userRoleRaw) {
-    console.error("Access Denied: No role found in session.");
-    return <Navigate to="/" replace />;
-  }
+  if (!userRoleRaw) return <Navigate to="/" replace />;
 
   const userRole = userRoleRaw.toUpperCase().trim();
-  
-  // Convert single string to array for uniform checking
-  const rolesToCheck = Array.isArray(allowedRoles) 
-    ? allowedRoles 
-    : [allowedRoles];
+  const rolesToCheck = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
 
   const hasAccess = rolesToCheck.some(requiredRole => {
     const cleanRequired = requiredRole.toUpperCase().trim();
@@ -75,12 +62,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
     );
   });
 
-  if (!hasAccess) {
-    console.error(`Access Denied: User[${userRole}] does not have any of the required roles:`, rolesToCheck);
-    return <Navigate to="/" replace />;
-  }
-
-  return <Outlet />;
+  return hasAccess ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 /* ================= MAIN APP COMPONENT ================= */
@@ -93,7 +75,6 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* PUBLIC ROUTES */}
         <Route path="/" element={<Landing setUser={setUser} />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -103,11 +84,14 @@ function App() {
           <Route element={<AccountantLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AccountantDashboard />} />
-            <Route path="payroll-processing" element={<AccountantPayroll />} />
             
-            {/* Shared Preview within Accountant Context */}
-            <Route path="payroll-processing/preview" element={<PayrollPreview />} /> 
-            
+            {/* Payroll processing using AdminPayroll component */}
+            <Route path="payroll-processing">
+                <Route index element={<AdminPayroll />} />
+                <Route path="adjust" element={<PayrollAdjustment />} />
+                <Route path="preview" element={<PayrollPreview />} />
+            </Route>
+
             <Route path="salary-management" element={<Salary />} />
             <Route path="tax-compliance" element={<Tax />} />
             <Route path="financial-reports" element={<AccountantReport />} />
@@ -119,26 +103,22 @@ function App() {
           <Route element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
-
-            {/* USER MANAGEMENT */}
             <Route path="users" element={<Users />} />
             <Route path="users/new" element={<AddUser />} />
             <Route path="users/edit/:id" element={<AddUser />} />
-
-            {/* EMPLOYEE MANAGEMENT */}
             <Route path="employees">
               <Route index element={<Employees />} />
               <Route path="new" element={<AddEmployee />} />
               <Route path="edit/:id" element={<AddEmployee />} />
             </Route>
-
-            {/* SYSTEM FEATURES */}
             <Route path="attendance" element={<Attendance />} />
             <Route path="leave" element={<Leave />} />
+            <Route path="holidays" element={<HolidaySettings />} />
             
-            {/* PAYROLL MANAGEMENT + PREVIEW */}
+            {/* Payroll section */}
             <Route path="payroll">
               <Route index element={<AdminPayroll />} />
+              <Route path="adjust" element={<PayrollAdjustment />} />
               <Route path="preview" element={<PayrollPreview />} />
             </Route>
 
@@ -159,7 +139,6 @@ function App() {
           </Route>
         </Route>
 
-        {/* CATCH-ALL */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
