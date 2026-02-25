@@ -79,7 +79,7 @@ function App() {
         <Route path="/" element={<Landing setUser={setUser} />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/setup-account" element={<InitialSetup />} />
+        <Route path="/initial-setup" element={<InitialSetup />} />
 
         {/* ACCOUNTANT MODULE - Checks for 'isAccountant' flag */}
         <Route path="/accountant" element={<ProtectedRoute requiredFlag="isAccountant" />}>

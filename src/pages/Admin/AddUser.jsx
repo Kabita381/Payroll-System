@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getUserById, createUser, updateUser } from "../../api/userApi";
 import { getRoles } from "../../api/roleApi"; 
-import { FaEye, FaEyeSlash, FaInfoCircle } from "react-icons/fa"; 
+import { FaInfoCircle } from "react-icons/fa"; 
 import "./AddUser.css"; 
 
 export default function AddUser() {
@@ -13,14 +13,12 @@ export default function AddUser() {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
-    password: "",
     role: { roleId: "" }, 
     status: "ACTIVE"
   });
 
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [statusMsg, setStatusMsg] = useState({ type: "", text: "" });
 
   const loadInitialData = useCallback(async () => {
@@ -37,7 +35,6 @@ export default function AddUser() {
           setFormData({
             username: u.username || "",
             email: u.email || "",
-            password: "", 
             role: { roleId: u.role?.roleId || u.roleId || "" },
             status: u.status || "ACTIVE"
           });
@@ -76,12 +73,9 @@ export default function AddUser() {
       };
 
       if (isEditMode) {
-        // If password is provided in edit mode, include it
-        if (formData.password) payload.password = formData.password;
         await updateUser(id, payload);
-        setStatusMsg({ type: "success", text: "User updated successfully!" });
+        setStatusMsg({ type: "success", text: "User account updated successfully!" });
       } else {
-        // NEW CONCEPT: Backend handles password generation and emailing
         await createUser(payload);
         setStatusMsg({ 
           type: "success", 
@@ -89,7 +83,7 @@ export default function AddUser() {
         });
       }
       
-      setTimeout(() => navigate("/admin/users"), 2500);
+      setTimeout(() => navigate("/admin/users"), 2000);
 
     } catch (err) {
       console.error("Submit error:", err);
@@ -103,7 +97,7 @@ export default function AddUser() {
   return (
     <div className="app-canvas">
       <header className="page-header">
-        <h3>{isEditMode ? "Update User Account" : "Register New User"}</h3>
+        <h3>{isEditMode ? "Edit User Account" : "Register New User"}</h3>
       </header>
 
       {statusMsg.text && (
@@ -111,17 +105,18 @@ export default function AddUser() {
       )}
 
       <div className="form-card-container">
+        {/* Help text only for creation */}
         {!isEditMode && (
           <div className="info-alert">
             <FaInfoCircle />
-            <span>A system-generated password will be sent to the user's email automatically.</span>
+            <span>The system will generate a secure password and email it to the user.</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="user-form">
           <div className="form-grid">
             <div className="form-group">
-              <label>Default/Initial Username</label>
+              <label>Username</label>
               <input 
                 name="username" 
                 placeholder="e.g. jdoe123"
@@ -132,7 +127,7 @@ export default function AddUser() {
             </div>
 
             <div className="form-group">
-              <label>Registered Email Address</label>
+              <label>Email Address</label>
               <input 
                 type="email" 
                 name="email" 
@@ -143,34 +138,8 @@ export default function AddUser() {
               />
             </div>
 
-            {/* Password field only appears in Edit Mode */}
-            {isEditMode && (
-              <div className="form-group">
-                <label>Reset Password (Optional)</label>
-                <div style={{ position: "relative" }}>
-                  <input 
-                    type={showPassword ? "text" : "password"} 
-                    name="password" 
-                    value={formData.password} 
-                    onChange={handleChange} 
-                    style={{ width: "100%", paddingRight: "40px" }}
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)",
-                      background: "none", border: "none", cursor: "pointer", color: "#666"
-                    }}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </div>
-              </div>
-            )}
-
             <div className="form-group">
-              <label>Assign Organizational Role</label>
+              <label>Organizational Role</label>
               <select name="roleId" value={formData.role.roleId} onChange={handleChange} required>
                 <option value="">-- Select Role --</option>
                 {roles.map(r => <option key={r.roleId} value={r.roleId}>{r.roleName}</option>)}
@@ -191,7 +160,7 @@ export default function AddUser() {
               Cancel
             </button>
             <button type="submit" disabled={loading} className="primary-btn">
-              {loading ? "Processing..." : (isEditMode ? "Update User" : "Create & Send Email")}
+              {loading ? "Saving..." : (isEditMode ? "Save Changes" : "Create User")}
             </button>
           </div>
         </form>

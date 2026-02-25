@@ -116,7 +116,7 @@ const EmployeeLayout = () => {
         </main>
 
         <footer className="employee-footer">
-          &copy; {new Date().getFullYear()} Payroll Management System | NAST Employee Portal
+          &copy; {new Date().getFullYear()} Payroll Management System .All rights reserved.
         </footer>
       </div>
     </div>

@@ -39,7 +39,7 @@ const ForgotPassword = () => {
         <div className="login-wrapper">
             <div className="login-card">
                 <div className="login-header">
-                    <h1>NAST</h1>
+                    <h1>PAYROLL SYSTEM</h1>
                     <p>Forgot Password</p>
                 </div>
 

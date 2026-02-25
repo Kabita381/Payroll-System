@@ -35,39 +35,33 @@ const Landing = ({ setUser }) => {
             });
 
             if (response.data) {
-                const { 
-                    token, userId, empId, username, role, email, 
-                    isFirstLogin, firstLogin, isAdmin, isAccountant, hasEmployeeRole 
-                } = response.data;
-
-                const mustSetup = isFirstLogin === true || firstLogin === true;
-                const userData = {
-                    token, userId, empId, username, role,
-                    email: email || username,
-                    isAdmin, isAccountant, hasEmployeeRole
-                };
-
-                if (mustSetup) {
-                    navigate('/setup-account', {
-                        state: { email: userData.email, userId: userData.userId }
-                    });
-                    return;
-                }
-
+                const userData = response.data;
+                const { token, role, isFirstLogin, email } = userData;
+                
+                // 1. Save to localStorage and App State
                 localStorage.setItem("user_session", JSON.stringify(userData));
                 if (setUser) setUser(userData);
 
-                const userRole = typeof role === 'object' 
-                    ? role.roleName.toUpperCase().trim() 
-                    : role.toUpperCase().trim();
+                // 2. PRIORITY CHECK: If first login, redirect to setup
+                // We pass the email in 'state' because InitialSetup.jsx requires it
+                if (isFirstLogin) {
+                    navigate('/initial-setup', { state: { email: email } });
+                    return; // Stop execution here
+                }
 
-                if (userRole.includes('ADMIN')) navigate('/admin/dashboard');
-                else if (userRole.includes('ACCOUNTANT')) navigate('/accountant/dashboard');
-                else if (userRole.includes('EMPLOYEE')) navigate('/employee/dashboard');
-                else setError("Unknown account role. Please contact support.");
+                // 3. Normal Role-based navigation
+                const userRole = (role.roleName || role).toUpperCase();
+                
+                if (userRole.includes('ADMIN')) {
+                    navigate('/admin/dashboard');
+                } else if (userRole.includes('ACCOUNTANT')) {
+                    navigate('/accountant/dashboard');
+                } else {
+                    navigate('/employee/dashboard');
+                }
             }
         } catch (err) {
-            setError(err.response?.data?.message || err.response?.data || "Authentication failed.");
+            setError(err.response?.data?.message || "Authentication failed.");
         } finally {
             setIsLoading(false);
         }
@@ -89,7 +83,6 @@ const Landing = ({ setUser }) => {
                             type="text"
                             placeholder="Enter your username"
                             required
-                            autoComplete="off"
                             value={credentials.username}
                             onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
                         />
@@ -102,16 +95,16 @@ const Landing = ({ setUser }) => {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••"
                                 required
-                                autoComplete="current-password"
                                 value={credentials.password}
                                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                             />
-                            <span
+                            <button 
+                                type="button"
                                 className="password-toggle-icon"
                                 onClick={() => setShowPassword(!showPassword)}
                             >
                                 {showPassword ? <AiFillEyeInvisible /> : <AiFillEye />}
-                            </span>
+                            </button>
                         </div>
                     </div>
 

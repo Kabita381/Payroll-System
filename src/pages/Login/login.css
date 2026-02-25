@@ -5,6 +5,7 @@
     align-items: center;
     justify-content: center;
     background-color: #f1f5f9;
+    font-family: 'Inter', sans-serif;
 }
 
 .login-card {
@@ -15,6 +16,7 @@
     max-width: 420px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
     text-align: center;
+    box-sizing: border-box;
 }
 
 .login-header h1 {
@@ -49,23 +51,21 @@
     text-transform: uppercase;
 }
 
-/* FIX: Ensure container is relative so icon stays INSIDE */
 .input-container {
-    position: relative;
+    position: relative; 
     width: 100%;
     display: flex;
-    align-items: center;
+    align-items: center; /* Vertical alignment for non-absolute children */
 }
-
 .input-group input {
     width: 100%;
-    padding: 12px 12px;
-    padding-right: 45px; /* Important: makes space so text doesn't go under icon */
+    padding: 12px;
+    padding-right: 45px; /* Keeps text from overlapping the icon */
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Crucial for width/padding calculation */
     font-size: 14px;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease ;
 }
 
 .input-group input:focus {
@@ -74,19 +74,22 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* FIX: Absolute positioning inside the input field */
+/* Perfect Centering Logic */
 .password-toggle-icon {
     position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%); /* Perfectly centers vertically */
+    right: 12px; /* Distance from right edge */
+    top: 50%;    /* Move to the middle */
+    transform: translateY(-50%); /* Offset by half its own height to center */
+    background: none;
+    border: none;
     display: flex;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
     color: #94a3b8;
-    font-size: 20px;
+    font-size: 1.2rem; /* Adjusted for better visibility */
+    padding: 0;
     z-index: 10;
-    transition: color 0.2s;
 }
 
 .password-toggle-icon:hover {
@@ -95,7 +98,8 @@
 
 .login-btn {
     width: 100%;
-    padding: 14px;
+    height: 48px; /* Fixed height to match reset buttons */
+    padding: 0 14px;
     background: #1e3a8a;
     color: white;
     border: none;
@@ -104,6 +108,10 @@
     margin-top: 30px;
     cursor: pointer;
     transition: background 0.2s;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .login-btn:hover {
@@ -113,6 +121,7 @@
 .login-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+    background: #94a3b8;
 }
 
 .error-box {
@@ -123,6 +132,7 @@
     padding: 10px;
     border-radius: 6px;
     border-left: 4px solid #ef4444;
+    text-align: left;
 }
 
 .trouble-link {
